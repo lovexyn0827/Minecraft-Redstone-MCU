@@ -13,7 +13,7 @@ Unless otherwise states, all source code in this repository is published under C
 ### Overview
 
  * A small computer following the Harvard's architecture (i.e. separate storage for data and instruction).
- * RISC-like instruction set, fixed 19-bit, or else we have to struggle with microcode or FSMs. :shrug:
+ * RISC-like instruction set, fixed 20-bit, or else we have to struggle with microcode or FSMs. :shrug:
  * 16 8-bit registers, with read-only `r0` storing constant 0.
  * A 8-bit data-path, 8-bit SRAM address, but 12 bit addressing space for program ROM.
  * Unified address space of SRAM and display RAM, possibly with a DMA.
@@ -49,7 +49,7 @@ Descriptions:
 - User constants: User-defined constants. (e.g. Sine tables)
 - System routines: Read-only region of code of system utilities. (e.g. Printing glyphs to the screen)
 
-Note that this lower 2 KB and higher 1 KB for instructions of this region is addressed by 19-bit words (i.e. not  byte-addressable), and the middle 1 KB for constants is addressed by 8-bit bytes.
+Note that this lower 2 KB and higher 1 KB for instructions of this region is addressed by 20-bit words (i.e. not  byte-addressable), and the middle 1 KB for constants is addressed by 8-bit bytes.
 
 #### Operand Stack
 
@@ -108,65 +108,77 @@ This feature may be dropped if it takes to much to switch between contexts. (`IN
 
 ## ISA and Assembly Language
 
-This MCU supports 29 instructions, all of which are 19-bits-long, and can be categorized into following types:
+This MCU supports 35 instructions, all of which are 20-bits-long, and can be categorized into following types:
 
 ```````
-         0123457689ABCDEFGHI
-R-Type: |op| rs| rt| rd|fnc| (3 + 4 + 4 + 4 + 4)
-I-Type: |op| rs| rt|  imm. | (3 + 4 + 4 + 8)
-B-Type: |op| rs|fn|  imm.  | (3 + 4 + 2 + 10)
-J-Type: |op| rs|  offset   | (3 + 4 + 12)
+         01234576890123456789
+R-Type: |opc| rs| rt| rd|fnc| (4 + 4 + 4 + 4 + 4)
+I-Type: |opc| rs| rt| imm_8 | (4 + 4 + 4 + 8)
+B-Type: |opc| rs|fn| imm_10 | (4 + 4 + 2 + 10)
+J-Type: |opc| rs|  imm_12   | (4 + 4 + 12)
 ```````
 
-> 19-bits instruction may seem weird, but it is an possibly an optimal compromise after trying 16-bits designs but resulting in insufficient number of GPRs and complex jumping instructions.
+> 20-bits instruction may seem weird, but it is an possibly an optimal compromise after trying 16-bits designs but resulting in insufficient number of GPRs and complex jumping instructions. By the way, we have even once consider 19-bit instructions, as you can see in earlier commits.
+
+### Design Considerations
+
+- We have no addition and subtraction with carry, which require us to use twice more instructions (in RISC-V-style) and thus making arithmetics between long integers twice slower. However, we can free us from struggling with flags.
+- We have no explicit `SUBI` instructions, since the assembler can easily help us to translate it to corresponding `ADDI`s. The same applies to `NOP`, etc.
+- Previously we have even no direct jump instruction that covers all 12-bits instruction memory spaces at all, instead, we have only one capable for jumping within up to $\pm 512$ words, which is `JMP`. That is also fine concerning that most direct jumps (rather than subroutine calls) are local, i.e. within a small memory area within the current routine, and $\pm 512$ words will be more than useful since most loop bodies span only a few dozens of instructions and even 8086 which runs much longer programs works well with $\pm 127$ jumps.
 
 ### R-Type Instructions
 
 ```````
-ADD  : 000 xxxx xxxx xxxx 0000 - R[rd] <- R[rs] + R[rt]
-SUB  : 000 xxxx xxxx xxxx 0001 - R[rd] <- R[rs] - R[rt]
-AND  : 000 xxxx xxxx xxxx 0010 - R[rd] <- R[rs] & R[rt]
-OR   : 000 xxxx xxxx xxxx 0011 - R[rd] <- R[rs] | R[rt]
-XOR  : 000 xxxx xxxx xxxx 0101 - R[rd] <- R[rs] ^ R[rt]
-CMP  : 000 xxxx xxxx xxxx 0100 - R[rd] <- R[rs] == R[rt] ? 1 : 0
-SHL  : 000 xxxx xxxx xxxx 0110 - R[rd] <- R[rs] << R[rt]
-SHR  : 000 xxxx xxxx xxxx 0111 - R[rd] <- R[rs] >>> R[rt]
-PUSH : 000 xxxx 0000 0000 1000 - Stack[++SP] <- R[rs]
-POP  : 000 0000 0000 xxxx 1001 - R[rd] <- Stack[--SP]
-CLR  : 000 xxxx xxxx xxxx 1010 - R[rd] <- R[rs] & ~(1 << R[rt]) 
-SET  : 000 xxxx xxxx xxxx 1011 - R[rd] <- R[rs] | (1 << R[rt])
-CLRI : 000 xxxx 0bit xxxx 1100 - R[rd] <- R[rs] & ~(1 << bit) 
-SETI : 000 xxxx 0bit xxxx 1101 - R[rd] <- R[rs] | (1 << bit) 
-SHLI : 000 xxxx 0shm xxxx 1110 - R[rd] <- R[rs] << shm
-SHRI : 000 xxxx 0shm xxxx 1111 - R[rd] <- R[rs] >>> shm
+ADD  : 0000 xxxx xxxx xxxx 0000 - R[rd] <- (R[rs] + R[rt])[7:0]
+SUB  : 0000 xxxx xxxx xxxx 0001 - R[rd] <- (R[rs] - R[rt])[7:0]
+AND  : 0000 xxxx xxxx xxxx 0010 - R[rd] <- R[rs] & R[rt]
+OR   : 0000 xxxx xxxx xxxx 0011 - R[rd] <- R[rs] | R[rt]
+XOR  : 0000 xxxx xxxx xxxx 0100 - R[rd] <- R[rs] ^ R[rt]
+SAR  : 0000 xxxx xxxx xxxx 0101 - R[rd] <- (R[rs] >> R[rt][2:0])[7:0]
+SHL  : 0000 xxxx xxxx xxxx 0110 - R[rd] <- (R[rs] << R[rt][2:0])[7:0]
+SHR  : 0000 xxxx xxxx xxxx 0111 - R[rd] <- (R[rs] >>> R[rt][2:0])[7:0]
+CLR  : 0000 xxxx xxxx xxxx 1000 - R[rd] <- (R[rs] & ~(1 << R[rt]))[7:0]
+SET  : 0000 xxxx xxxx xxxx 1001 - R[rd] <- (R[rs] | (1 << R[rt]))[7:0]
+PUSH : 0000 xxxx 0000 0000 1010 - OperandStack.Push(R[rs])
+POP  : 0000 0000 0000 xxxx 1011 - R[rd] <- OperandStack.Pop()
+CMPU : 0000 xxxx xxxx xxxx 11md - @ = { =, !=, >, < }[md]; R[rd] <- R[rs] @ R[rt] ? 1 : 0
 ```````
 
 ### I-Type Instruments
 
 ``````
-ADDI  : 001 xxxx xxxx xxxxxxxx - R[rt] <- R[rs] + imm
-ILOAD : 010 xxxx xxxx xxxxxxxx - R[rt] <- Mem[R[rs] + imm] 
-ISTORE: 011 xxxx xxxx xxxxxxxx - Mem[R[rs] + imm)] <- R[rt]
+SARI  : 0001 xxxx xxxx xxx00101 - R[rt] <- (R[rs] >> imm[7:5])[7:0]
+SHLI  : 0001 xxxx xxxx xxx00110 - R[rt] <- (R[rs] << imm[7:5])[7:0]
+SHRI  : 0001 xxxx xxxx xxx00111 - R[rt] <- (R[rs] >>> imm[7:5])[7:0]
+CLRI  : 0001 xxxx xxxx xxx01000 - R[rt] <- (R[rs] & ~(1 << imm[7:5]))[7:0] 
+SETI  : 0001 xxxx xxxx xxx01001 - R[rt] <- (R[rs] | (1 << imm[7:5]))[7:0]
+ILOAD : 0010 xxxx xxxx xxxxxxxx - R[rt] <- Mem[(R[rs] + imm)[8:0]]
+ISTORE: 0011 xxxx xxxx xxxxxxxx - Mem[(R[rs] + imm)[8:0]] <- R[rt]
+CMPIU : 01md xxxx xxxx xxxxxxxx - @ = { =, !=, >, < }[md]; R[rt] <- R[rs] @ imm ? 1 : 0
+ADDI  : 1000 xxxx xxxx xxxxxxxx - R[rt] <- (R[rs] + imm)[7:0]
+ANDI  : 1010 xxxx xxxx xxxxxxxx - R[rt] <- R[rs] & imm
+ORI   : 1011 xxxx xxxx xxxxxxxx - R[rt] <- R[rs] | imm
+XORI  : 1100 xxxx xxxx xxxxxxxx - R[rt] <- R[rs] ^ imm
 ``````
 
 ### B-Type Instruments
 
 ``````
-BEZ   : 100 xxxx 00 xxxxxxxxxx - if (R[rs] == 8'b0)  PC <- PC + SignExt(imm) + 1
-BNEZ  : 100 xxxx 01 xxxxxxxxxx - if (R[rs] != 8'b0)  PC <- PC + SignExt(imm) + 1
-BLTZ  : 100 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- PC + SignExt(imm) + 1
-BGTZ  : 100 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'hFF) PC <- PC + SignExt(imm) + 1
-CMPI  : 101 xxxx 00 mdxxxxxxxx - @ = { =, !=, >, < }[md]; R[rs] <- R[rs] @ imm ? 1 : 0
-RET   : 101 xxxx 01 0000000000 - PC <- CallStack[CSP--]
-INCSR : 101 xxxx 10 xxxxxxxxxx - CSR[imm] <- R[rs]
-OUTCSR: 101 xxxx 11 xxxxxxxxxx - r[rs] <- CSR[imm]
+BEZ   : 1110 xxxx 00 xxxxxxxxxx - if (R[rs] == 8'b0)  PC <- (PC + SignExt(imm))[11:0]
+BNEZ  : 1110 xxxx 01 xxxxxxxxxx - if (R[rs] != 8'b0)  PC <- (PC + SignExt(imm))[11:0]
+BLTZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- (PC + SignExt(imm))[11:0]
+BGTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
+RET   : 1111 0000 00 0000000000 - PC <- CallStack.Pop()
+JMP   : 1111 xxxx 01 xxxxxxxxxx - PC <- (PC + SignExt(imm))[11:0]
+INCSR : 1111 xxxx 10 xxxxxxxxxx - CSR[imm] <- R[rs]
+OUTCSR: 1111 xxxx 11 xxxxxxxxxx - r[rs] <- CSR[imm]
 ``````
 
 ### J-Type Instruments
 
 ```````
-JMP   : 110 xxxx xxxxxxxxxxxx - PC <- PC + R[rs] + imm + 1
-INVOKE: 111 xxxx xxxxxxxxxxxx - CallStack[++CSP] <- PC; PC <- R[rs] + imm
+LJMP:	1001 xxxx xxxxxxxxxxxx - PC <- (imm + SignExt(R[rs]))[11:0]
+INVOKE: 1101 xxxx xxxxxxxxxxxx - CallStack.Push(PC); PC <- (SignExt(R[rs]) + imm)[11:0]
 ```````
 
 ### Assembly Language
@@ -272,7 +284,7 @@ LOOP:
 
 ### Quadratic Function Graph
 
-### Square Roots
+### Square Root
 
 ### Data Matrix Generator
 
