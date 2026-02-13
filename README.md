@@ -170,8 +170,8 @@ BGTZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- (PC + SignExt(imm))[
 BLTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
 RET   : 1111 0000 00 0000000000 - PC <- (CallStack.Pop() + 1)
 JMP   : 1111 xxxx 01 xxxxxxxxxx - PC <- (PC + SignExt(imm))[11:0]
-INCSR : 1111 xxxx 10 xxxxxxxxxx - CSR[imm] <- R[rs]
-OUTCSR: 1111 xxxx 11 xxxxxxxxxx - r[rs] <- CSR[imm]
+INCSR : 1111 xxxx 10 xxxxxxxxxx - R[rs] <- CSR[imm]
+OUTCSR: 1111 xxxx 11 xxxxxxxxxx - CSR[imm] <- R[rs]
 ``````
 
 ### J-Type Instruments
