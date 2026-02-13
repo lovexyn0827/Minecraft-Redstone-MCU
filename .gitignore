@@ -1,1 +1,2 @@
-build 
+*.vcd
+src/verilog/obj_dir

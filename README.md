@@ -111,10 +111,10 @@ This feature may be dropped if it takes to much to switch between contexts. (`IN
 This MCU supports 35 instructions, all of which are 20-bits-long, and can be categorized into following types:
 
 ```````
-         01234576890123456789
+         98765432109876543210
 R-Type: |opc| rs| rt| rd|fnc| (4 + 4 + 4 + 4 + 4)
 I-Type: |opc| rs| rt| imm_8 | (4 + 4 + 4 + 8)
-B-Type: |opc| rs|fn| imm_10 | (4 + 4 + 2 + 10)
+B-Type: |opc| rs|f|  imm_10 | (4 + 4 + 2 + 10)
 J-Type: |opc| rs|  imm_12   | (4 + 4 + 12)
 ```````
 
@@ -129,19 +129,19 @@ J-Type: |opc| rs|  imm_12   | (4 + 4 + 12)
 ### R-Type Instructions
 
 ```````
-ADD  : 0000 xxxx xxxx xxxx 0000 - R[rd] <- (R[rs] + R[rt])[7:0]
-SUB  : 0000 xxxx xxxx xxxx 0001 - R[rd] <- (R[rs] - R[rt])[7:0]
-AND  : 0000 xxxx xxxx xxxx 0010 - R[rd] <- R[rs] & R[rt]
-OR   : 0000 xxxx xxxx xxxx 0011 - R[rd] <- R[rs] | R[rt]
-XOR  : 0000 xxxx xxxx xxxx 0100 - R[rd] <- R[rs] ^ R[rt]
-SAR  : 0000 xxxx xxxx xxxx 0101 - R[rd] <- (R[rs] >> R[rt][2:0])[7:0]
-SHL  : 0000 xxxx xxxx xxxx 0110 - R[rd] <- (R[rs] << R[rt][2:0])[7:0]
-SHR  : 0000 xxxx xxxx xxxx 0111 - R[rd] <- (R[rs] >>> R[rt][2:0])[7:0]
-CLR  : 0000 xxxx xxxx xxxx 1000 - R[rd] <- (R[rs] & ~(1 << R[rt]))[7:0]
-SET  : 0000 xxxx xxxx xxxx 1001 - R[rd] <- (R[rs] | (1 << R[rt]))[7:0]
-PUSH : 0000 xxxx 0000 0000 1010 - OperandStack.Push(R[rs])
-POP  : 0000 0000 0000 xxxx 1011 - R[rd] <- OperandStack.Pop()
-CMPU : 0000 xxxx xxxx xxxx 11md - @ = { =, !=, >, < }[md]; R[rd] <- R[rs] @ R[rt] ? 1 : 0
+ADD   : 0000 xxxx xxxx xxxx 0000 - R[rd] <- (R[rs] + R[rt])[7:0]
+SUB   : 0000 xxxx xxxx xxxx 0001 - R[rd] <- (R[rs] - R[rt])[7:0]
+AND   : 0000 xxxx xxxx xxxx 0010 - R[rd] <- R[rs] & R[rt]
+OR    : 0000 xxxx xxxx xxxx 0011 - R[rd] <- R[rs] | R[rt]
+XOR   : 0000 xxxx xxxx xxxx 0100 - R[rd] <- R[rs] ^ R[rt]
+SAR   : 0000 xxxx xxxx xxxx 0101 - R[rd] <- (R[rs] >> R[rt][2:0])[7:0]
+SHL   : 0000 xxxx xxxx xxxx 0110 - R[rd] <- (R[rs] << R[rt][2:0])[7:0]
+SHR   : 0000 xxxx xxxx xxxx 0111 - R[rd] <- (R[rs] >>> R[rt][2:0])[7:0]
+SET   : 0000 xxxx xxxx xxxx 1000 - R[rd] <- (R[rs] & ~(1 << R[rt]))[7:0]
+CLR   : 0000 xxxx xxxx xxxx 1001 - R[rd] <- (R[rs] | (1 << R[rt]))[7:0]
+PUSH  : 0000 xxxx 0000 0000 1010 - OperandStack.Push(R[rs])
+POP   : 0000 0000 0000 xxxx 1011 - R[rd] <- OperandStack.Pop()
+CMPU  : 0000 xxxx xxxx xxxx 11md - @ = { =, !=, >, < }[md]; R[rd] <- R[rs] @ R[rt] ? 1 : 0
 ```````
 
 ### I-Type Instruments
@@ -150,10 +150,10 @@ CMPU : 0000 xxxx xxxx xxxx 11md - @ = { =, !=, >, < }[md]; R[rd] <- R[rs] @ R[rt
 SARI  : 0001 xxxx xxxx xxx00101 - R[rt] <- (R[rs] >> imm[7:5])[7:0]
 SHLI  : 0001 xxxx xxxx xxx00110 - R[rt] <- (R[rs] << imm[7:5])[7:0]
 SHRI  : 0001 xxxx xxxx xxx00111 - R[rt] <- (R[rs] >>> imm[7:5])[7:0]
-CLRI  : 0001 xxxx xxxx xxx01000 - R[rt] <- (R[rs] & ~(1 << imm[7:5]))[7:0] 
-SETI  : 0001 xxxx xxxx xxx01001 - R[rt] <- (R[rs] | (1 << imm[7:5]))[7:0]
-ILOAD : 0010 xxxx xxxx xxxxxxxx - R[rt] <- Mem[(R[rs] + imm)[8:0]]
-ISTORE: 0011 xxxx xxxx xxxxxxxx - Mem[(R[rs] + imm)[8:0]] <- R[rt]
+SETI  : 0001 xxxx xxxx xxx01000 - R[rt] <- (R[rs] & ~(1 << imm[7:5]))[7:0] 
+CLRI  : 0001 xxxx xxxx xxx01001 - R[rt] <- (R[rs] | (1 << imm[7:5]))[7:0]
+ILOAD : 0010 xxxx xxxx xxxxxxxx - R[rt] <- Mem[(R[rs] + imm)[7:0]]
+ISTORE: 0011 xxxx xxxx xxxxxxxx - Mem[(R[rs] + imm)[7:0]] <- R[rt]
 CMPIU : 01md xxxx xxxx xxxxxxxx - @ = { =, !=, >, < }[md]; R[rt] <- R[rs] @ imm ? 1 : 0
 ADDI  : 1000 xxxx xxxx xxxxxxxx - R[rt] <- (R[rs] + imm)[7:0]
 ANDI  : 1010 xxxx xxxx xxxxxxxx - R[rt] <- R[rs] & imm
@@ -164,11 +164,11 @@ XORI  : 1100 xxxx xxxx xxxxxxxx - R[rt] <- R[rs] ^ imm
 ### B-Type Instruments
 
 ``````
-BEZ   : 1110 xxxx 00 xxxxxxxxxx - if (R[rs] == 8'b0)  PC <- (PC + SignExt(imm))[11:0]
+BEQZ  : 1110 xxxx 00 xxxxxxxxxx - if (R[rs] == 8'b0)  PC <- (PC + SignExt(imm))[11:0]
 BNEZ  : 1110 xxxx 01 xxxxxxxxxx - if (R[rs] != 8'b0)  PC <- (PC + SignExt(imm))[11:0]
-BLTZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- (PC + SignExt(imm))[11:0]
-BGTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
-RET   : 1111 0000 00 0000000000 - PC <- CallStack.Pop()
+BGTZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- (PC + SignExt(imm))[11:0]
+BLTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
+RET   : 1111 0000 00 0000000000 - PC <- (CallStack.Pop() + 1)
 JMP   : 1111 xxxx 01 xxxxxxxxxx - PC <- (PC + SignExt(imm))[11:0]
 INCSR : 1111 xxxx 10 xxxxxxxxxx - CSR[imm] <- R[rs]
 OUTCSR: 1111 xxxx 11 xxxxxxxxxx - r[rs] <- CSR[imm]
@@ -177,7 +177,7 @@ OUTCSR: 1111 xxxx 11 xxxxxxxxxx - r[rs] <- CSR[imm]
 ### J-Type Instruments
 
 ```````
-LJMP:	1001 xxxx xxxxxxxxxxxx - PC <- (imm + SignExt(R[rs]))[11:0]
+LJMP  : 1001 xxxx xxxxxxxxxxxx - PC <- (imm + SignExt(R[rs]))[11:0]
 INVOKE: 1101 xxxx xxxxxxxxxxxx - CallStack.Push(PC); PC <- (SignExt(R[rs]) + imm)[11:0]
 ```````
 
@@ -188,11 +188,17 @@ INVOKE: 1101 xxxx xxxxxxxxxxxx - CallStack.Push(PC); PC <- (SignExt(R[rs]) + imm
 ``````````
 Assembly Program := Line*
 
-Line := (InsnLine) | (PreprocessorLine)
+Line := [(InsnLine | PreprocessorLine | VariableLine | ORGLine | PointerLine)][%Comment]
 
-InsnLine := [Label:] [Insn] [%Comment]
+InsnLine := [Label:] [Insn]
 
 PreprocessorLine := #CONST Identifier (Imm | SignedImm)
+
+VariableLine := DB Identifier Imm [,Imm]*
+
+ORGLine := ORG Imm
+
+PointerLine := PTR Identifier Expression
 
 Label := Identifier
 	
@@ -224,17 +230,17 @@ IOInst := IOInsnOpcode Reg, IOPort
 
 Reg := r0 | r1 | ... | r15
 
-JmpTarget := MemAddr
+JmpTarget := Label | Imm\(Reg\)
 
 BranchTarget := Label | SignedImm\(Reg\)
 
-MemAddr := Label | Imm\(Reg\)
+MemAddr := Identifier | Imm\(Reg\)
 
 Cond := EQ | NE | GT | LT
 
 IOPort := Imm 
 
-Imm := DecNumU | 0xHexNum | 0bBinNum
+Imm := DecNumU | 0xHexNum | 0bBinNum | &Label | &Identifier
 
 SignedImm := (+|-)*DecNum
 ``````````
@@ -285,6 +291,114 @@ LOOP:
 ### Quadratic Function Graph
 
 ### Square Root
+
+### Reed-Solomon ECC
+
+Compiles from:
+
+``````c
+#include <stdint.h>
+
+#define GF (256)
+#define PP (0b00011101)
+#define K (2)
+#define N (3)
+
+uint8_t gf256_mul_on_fly(uint8_t x, uint8_t y) {
+    uint8_t z = 0;
+    int8_t i = 7;
+    do {
+        uint8_t t = z << 1;
+        if (z & 0x80) {
+            t = t ^ PP;
+        }
+
+        if ((x >> i) & 1) {
+            t = t ^ y;
+        }
+
+        z = t;
+    } while(--i >= 0);
+    return z;
+}
+
+void calc_rs_ecc(uint8_t *dat, uint8_t *gp) {
+    uint8_t *ecc = dat + N;
+    int8_t i = N - 1;
+    do {
+        int8_t x = ecc[0] ^ dat[i];
+        int j = 0;
+        do {
+            ecc[j] = ecc[j + 1] ^ gf256_mul_on_fly(gp[K - j - 1], x);
+        } while (++j < K);
+    } while (--i >= 0);
+}
+``````
+
+And to:
+
+````````` 
+	CONST	PP	00101101
+	CONST	N	3
+	CONST	K	2
+	CONST	M	255
+
+	DB	CW	0x07 0x06 0x05 0x00 0x00 0x00
+	DB	GP	0x02 0x03 0x01
+	
+	PTR	ECC		CW + N
+	PTR ECCP1	ECC + 1
+	PTR ECCMOST	ECC + K - 1
+	PTR GPTOP	GP + K - 1
+
+	% Main procedure
+	% Affects r1 - r8
+
+CALC_RS_ECC:
+	ADDI	r1, r0, N - 1
+PER_DATA_WORD:
+	ILOAD	r2, ECCMOST(r0)
+	ILOAD	r3, CW(r1)
+	XOR		r2, r2, r3
+	ADDI	r3, r0, r0
+PER_REGISTER:
+	SUB		r4, r0, r3
+	ILOAD	r4, GPTOP(r4)
+	INVOKE	GF256_MUL
+	ILOAD	r4, ECCP1(r3)
+	XOR		r4, r4, r5
+	ISTORE	r4, ECC(r3)
+	ADDI	r3, r3, 1
+	ADDI	r4, r3, K
+	BLTZ	r3, PER_REGISTER
+	ADDI	r1, r1, -1
+	BGTZ	r3, PER_DATA_WORD
+	RET
+	
+	% End of main procedure
+
+	% r5 <- GF256_MUL(r2, r4)
+	% Affects r5, r6, r7, r8
+GF256_MUL:
+	ADD		r5, r0, r0
+	ADDI	r6, r0, 7
+PER_BIT:
+	SHLI	r7, r5, 1
+	ANDI	r8, r5, 0x80
+	JEQZ	r8, SKIP_XOR_PP
+	XORI	r7, r7, PP
+SKIP_XOR_PP:
+	SHR		r8, r2, r6
+	ANDI	r8, r8, 1
+	JEQZ	r8, SKIP_XOR_PP
+	XORI	r7, r7, r4
+SKIP_ADD:
+	ADDI	r5, r7, r0
+	ADDI	r6, r6, -1
+	BLTZ	r6, GF256_MUL_END
+	JMP		PER_BIT
+GF256_MUL_END:
+`````````
 
 ### Data Matrix Generator
 
