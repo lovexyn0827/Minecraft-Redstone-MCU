@@ -191,58 +191,43 @@ Assembly Program := Line*
 Line := [(InsnLine | PreprocessorLine | VariableLine | ORGLine | PointerLine)][%Comment]
 
 InsnLine := [Label:] [Insn]
-
-PreprocessorLine := #CONST Identifier (Imm | SignedImm)
-
-VariableLine := DB Identifier Imm [,Imm]*
-
-ORGLine := ORG Imm
-
-PointerLine := PTR Identifier Expression
+PreprocessorLine := CONST Constant Expr
+VariableLine := DB Variable Expr
+ORGLine := ORG Expr
+PointerLine := PTR Pointer Expression
 
 Label := Identifier
-	
+Constant := Identifier
+Variable := Identifier
+Pointer := Identifier
+
 Insn := ALUInsn | ImmALUInsn | SignedImmALUInsn | MemoryInsn 
 		| StackInsn | JmpInsn | BranchInsn | SimpleInsn | CMPInsn 
 		| CMPIInsn | IOInsn
-
 ALUInsn := ALUInsnOpcode Reg, Reg, Reg
-
 ImmALUInsn := ImmALUInsnOpcode Reg, Reg, Imm
-
-SignedImmALUInsn := ImmALUInsnOpcode Reg, Reg, SignedImm
-
 MemoryInsn := MemoryInstOpcode Reg, MemAddr
-
 StackInsn := StackInsnOpcode Reg
-
-JmpInsn := JmpInsnOpcode JmpTarget
-
-BranchInsn := BranchInsnCode Reg, BranchTarget
-
+JmpRegInsn := JmpInsnOpcode JmpRegTarget
+JmpInst := JmpDirectInsnOpcode JmpTarget
+BranchInsn := BranchInsnCode Reg, JmpRegTarget
 SimpleInsn := SimpleInsnOpcode
-
 CMPInsn := CMP Reg, Reg Cond Reg
-
-CMPIInsn := CMPI Reg, Reg Cond SignedImm
-
-IOInst := IOInsnOpcode Reg, IOPort
+CMPIInsn := CMPI Reg, Reg Cond Imm
+IOInsn := IOInsnOpcode Reg, IOPort
 
 Reg := r0 | r1 | ... | r15
-
-JmpTarget := Label | Imm\(Reg\)
-
-BranchTarget := Label | SignedImm\(Reg\)
-
-MemAddr := Identifier | Imm\(Reg\)
-
+JmpRegTarget := Reg\(Expr\)
+JmpTarget := Imm
+MemAddr := Variable | Reg\(Expr\)
 Cond := EQ | NE | GT | LT
-
 IOPort := Imm 
 
-Imm := DecNumU | 0xHexNum | 0bBinNum | &Label | &Identifier
-
-SignedImm := (+|-)*DecNum
+Imm := Expression
+Expr := [\(](Expr Operator Expr) | Num [\)]
+Operator := +|-|*|/|&|^||
+Num := ((+|-)DecNumU) | 0xHexNum | 0bBinNum | Label | &Variable | Constant
+Identifier := [A-Za-z_][A-Za-z0-9_]*
 ``````````
 
 #### Semiatics
@@ -268,8 +253,8 @@ INCSR	r8, 0x80		; r8 <- CSR[0x80]
 #### Example program
 
 ```````
-	#CONST GPIB 0x8E
-	#CONST GPOB	0x8F
+	CONST GPIB 0x8E
+	CONST GPOB 0x8F
 
 START:
 	INCSR	R1, GPIB

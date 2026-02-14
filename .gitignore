@@ -1,2 +1,6 @@
 *.vcd
+*.cbp
+*.depend
+*.o
 src/verilog/obj_dir
+src/toolchain/assembler/obj
