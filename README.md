@@ -150,8 +150,8 @@ CMPU  : 0000 xxxx xxxx xxxx 11md - @ = { =, !=, >, < }[md]; R[rd] <- R[rs] @ R[r
 SARI  : 0001 xxxx xxxx xxx00101 - R[rt] <- (R[rs] >> imm[7:5])[7:0]
 SHLI  : 0001 xxxx xxxx xxx00110 - R[rt] <- (R[rs] << imm[7:5])[7:0]
 SHRI  : 0001 xxxx xxxx xxx00111 - R[rt] <- (R[rs] >>> imm[7:5])[7:0]
-SETI  : 0001 xxxx xxxx xxx01000 - R[rt] <- (R[rs] & ~(1 << imm[7:5]))[7:0] 
-CLRI  : 0001 xxxx xxxx xxx01001 - R[rt] <- (R[rs] | (1 << imm[7:5]))[7:0]
+SETI  : 0001 xxxx xxxx xxx01000 - R[rt] <- (R[rs] | (1 << imm[7:5]))[7:0] 
+CLRI  : 0001 xxxx xxxx xxx01001 - R[rt] <- (R[rs] & ~(1 << imm[7:5]))[7:0]
 ILOAD : 0010 xxxx xxxx xxxxxxxx - R[rt] <- Mem[(R[rs] + imm)[7:0]]
 ISTORE: 0011 xxxx xxxx xxxxxxxx - Mem[(R[rs] + imm)[7:0]] <- R[rt]
 CMPIU : 01md xxxx xxxx xxxxxxxx - @ = { =, !=, >, < }[md]; R[rt] <- R[rs] @ imm ? 1 : 0
@@ -169,7 +169,7 @@ BNEZ  : 1110 xxxx 01 xxxxxxxxxx - if (R[rs] != 8'b0)  PC <- (PC + SignExt(imm))[
 BGTZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- (PC + SignExt(imm))[11:0]
 BLTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
 RET   : 1111 0000 00 0000000000 - PC <- (CallStack.Pop() + 1)
-JMP   : 1111 xxxx 01 xxxxxxxxxx - PC <- (PC + SignExt(imm))[11:0]
+JMP   : 1111 0000 01 xxxxxxxxxx - PC <- (PC + SignExt(imm))[11:0]
 INCSR : 1111 xxxx 10 xxxxxxxxxx - R[rs] <- CSR[imm]
 OUTCSR: 1111 xxxx 11 xxxxxxxxxx - CSR[imm] <- R[rs]
 ``````

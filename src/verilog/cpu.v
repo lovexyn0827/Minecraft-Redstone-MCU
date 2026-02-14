@@ -32,6 +32,7 @@ wire rf_wrt;
 wire sram2rf;
 wire imm2alu;
 wire csr2rf;
+wire jmp_with_reg;
 
 wire [7:0] alu_out;
 wire [7:0] rf_rd1, rf_rd2;
@@ -60,7 +61,8 @@ cu cu (
     .sram2rf(sram2rf), 
     .imm2alu(imm2alu), 
     .csr2rf(csr2rf),
-    .csr_wrt(csr_bus_wrt)
+    .csr_wrt(csr_bus_wrt), 
+    .jmp_with_reg(jmp_with_reg)
 );
 
 wire [11:0] call_stack_out;
@@ -74,10 +76,14 @@ stack #( .WLEN(12) ) call_stack (
     .pop(call_pop)
 );
 
+wire [11:0] npc_imm_target, npc_offset;
+assign npc_imm_target = call_pop ? call_stack_out : imm12;
+assign npc_offset = jmp_with_reg ? { { 4 { rf_rd1[7] } }, rf_rd1 } : imm12;
+
 npc npc (
     .prev_pc(pc), 
-    .imm_target(call_pop ? call_stack_out : imm12), 
-    .offset(imm12), 
+    .imm_target(npc_imm_target), 
+    .offset(npc_offset), 
     .mode(npc_mode), 
     .next_pc(next_pc)
 );

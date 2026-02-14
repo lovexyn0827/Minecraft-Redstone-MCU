@@ -7,11 +7,16 @@
 module npc (
     input   wire    [11:0]  prev_pc, 
     input   wire    [11:0]  imm_target, 
-    input   wire    [11:0]  offset, 
-    input   wire    [1:0]   mode, /* 00: OFFSET, 01: SEQUENTIAL, 10: IMMEDIATE, 11: RETURN */
+    input   wire    [11:0]  offset,     // R[rs] if jumping with an register offset, or imm12 otherwise
+    input   wire    [1:0]   mode,       // 00: OFFSET, 01: SEQUENTIAL, 10: IMMEDIATE, 11: RETURN
     output  wire    [11:0]  next_pc
 );
 
-assign next_pc = (mode[1] ? imm_target : prev_pc) + (mode[0] ? 12'b1 : ({ 12{ ~mode[1] } } & offset));
+// 00: PC <- PC + offset
+// 01: PC <- PC + 1
+// 10: PC <- IMM + offset
+// 11: PC <- PC + IMM + 1
+
+assign next_pc = (mode[1] ? imm_target : prev_pc) + (mode[0] ? 12'b1 : offset);
 
 endmodule

@@ -18,7 +18,8 @@ module cu (
     output  wire    [11:0]  imm12_out, 
     output  wire            sram2rf, sram_wrt, 
     output  wire            imm2alu, 
-    output  wire            csr2rf, csr_wrt
+    output  wire            csr2rf, csr_wrt, 
+    output  wire            jmp_with_reg
 );
 
 wire [3:0] opcode;
@@ -134,10 +135,11 @@ assign ret = (opcode == 4'b1111) & (btype_fn == 2'b00);
 assign jmp = (opcode == 4'b1111) & (btype_fn == 2'b01);
 assign call_pop = ret;
 // We won't use the ALU to give branching conditions - saving time and an external controlling signal
-assign branch_cond = { rs_val[7], ~rs_val[7], rs_val != 8'b0, rs_val == 8'b0 };
+assign branch_cond = { ~rs_val[7], rs_val[7], rs_val != 8'b0, rs_val == 8'b0 };
 assign should_branch = branch_insn ? branch_cond[btype_fn] : 1'b1;  // We don't suppress jumps IF ANY
 // Todo: bit-level hacks
-assign btype_npc_mode = branch_insn ? (should_branch ? `NPC_OFFSET : `NPC_SEQ) : (jmp ? `NPC_OFFSET : (ret ? `NPC_RET : `NPC_SEQ));
+assign btype_npc_mode = branch_insn ? 
+    (should_branch ? `NPC_OFFSET : `NPC_SEQ) : (jmp ? `NPC_OFFSET : (ret ? `NPC_RET : `NPC_SEQ));
 assign btype_rf_wrt = (opcode == 4'b1111) & (btype_fn == 2'b10);
 assign btype_rf_ri1 = rs;
 assign btype_rf_wi = rs;
@@ -156,6 +158,7 @@ assign jtype = opcode[3] & ~opcode[1] & opcode[0];
 assign jtype_npc_mode = `NPC_IMM;
 assign call_push = opcode == 4'b1101;
 assign jtype_imm_out = imm12;
+assign jmp_with_reg = jtype;
 
 assign rf_wrt = rtype ? rtype_rf_wrt : (itype ? itype_rf_wrt : btype_rf_wrt);   // J-Type insns don't write to RF
 assign rf_ri1 = rtype ? rtype_rf_ri1 : (itype ? itype_rf_ri1 : btype_rf_ri1);   // J-Type insns don't operate on RF

@@ -17,7 +17,10 @@ module imem (
 // PUSH     r4
 // INCSR    r4, 0x02
 // POP      r5
+// INVOKE   
 // LJMP     0x000
+// ADDI     r1, r0, 0xF0
+// RET
 
 always @(addr) begin
     case (addr)
@@ -33,7 +36,10 @@ always @(addr) begin
         12'h019: insn <= 20'h0400A;
         12'h01A: insn <= 20'hF4802;
         12'h01B: insn <= 20'h0005B;
-        12'h01C: insn <= 20'h90000;
+        12'h01C: insn <= 20'hD001F;
+        12'h01D: insn <= 20'h91020;
+        12'h01E: insn <= 20'h801F0;
+        12'h01F: insn <= 20'hF0000;
         default: insn <= 20'h00000;
     endcase
 end
