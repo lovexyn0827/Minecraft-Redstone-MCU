@@ -2,5 +2,12 @@
 *.cbp
 *.depend
 *.o
+*.class
+*.layout
+*.stackdump
+*.classpath
+*.project
+.settings
 src/verilog/obj_dir
 src/toolchain/assembler/obj
+src/toolchain/assembler/bin
