@@ -1,3 +1,6 @@
+#ifndef INSTRUCTIONS_H_INCLUDED
+#define INSTRUCTIONS_H_INCLUDED
+
 typedef enum {
 	R_TYPE,
 	I_TYPE,
@@ -57,3 +60,38 @@ typedef enum {
 
 #define OP_LJMP (0b1001)
 #define OP_INVOKE (0b1101)
+
+#define FN_NIL (-1)
+#define FN_ADD (0b0000)
+#define FN_SUB (0b0001)
+#define FN_AND (0b0010)
+#define FN_OR (0b0011)
+#define FN_XOR (0b0100)
+#define FN_SAR (0b0101)
+#define FN_SHL (0b0110)
+#define FN_SHR (0b0111)
+#define FN_SET (0b1000)
+#define FN_CLR (0b1001)
+#define FN_PUSH (0b1010)
+#define FN_POP (0b1011)
+#define FN_CMPU_PREFIX (0b1100)
+
+#define BF_NIL (-1)
+#define BF_BEQZ (0b00)
+#define BF_BNEZ (0b01)
+#define BF_BGTZ (0b10)
+#define BF_BLTZ (0b11)
+#define BF_RET (0b00)
+#define BF_JMP (0b01)
+#define BF_INCSR (0b10)
+#define BF_OUTCSR (0b11)
+
+#define COND_INVALID (-1)
+#define COND_EQ (0b00)
+#define COND_NE (0b01)
+#define COND_GT (0b10)
+#define COND_LT (0b11)
+
+#define INSN_NOP (0x00000)
+
+#endif // INSTRUCTIONS_H_INCLUDED

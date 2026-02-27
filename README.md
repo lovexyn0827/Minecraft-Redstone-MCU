@@ -188,12 +188,12 @@ INVOKE: 1101 xxxx xxxxxxxxxxxx - CallStack.Push(PC); PC <- (SignExt(R[rs]) + imm
 ``````````
 Assembly Program := Line*
 
-Line := [(InsnLine | PreprocessorLine | VariableLine | ORGLine | PointerLine)][%Comment]
+Line := [(InsnLine | ConstLine | VariableLine | ORGLine | PointerLine)][%Comment]\n
 
 InsnLine := [Label:] [Insn]
-PreprocessorLine := CONST Constant Expr
+ConstLine := CONST Constant Expr
 VariableLine := DB Variable Expr
-ORGLine := ORG Expr
+ORGLine := ORG (IM | SRAM) Expr
 PointerLine := PTR Pointer Expression
 
 Label := Identifier
@@ -204,28 +204,40 @@ Pointer := Identifier
 Insn := ALUInsn | ImmALUInsn | SignedImmALUInsn | MemoryInsn 
 		| StackInsn | JmpInsn | BranchInsn | SimpleInsn | CMPInsn 
 		| CMPIInsn | IOInsn
-ALUInsn := ALUInsnOpcode Reg, Reg, Reg
-ImmALUInsn := ImmALUInsnOpcode Reg, Reg, Imm
-MemoryInsn := MemoryInstOpcode Reg, MemAddr
+ALUInsn := ALUInsnOpcode Reg Reg Reg
+ImmALUInsn := ImmALUInsnOpcode Reg Reg Imm
+MemoryInsn := MemoryInstOpcode Reg MemAddr
 StackInsn := StackInsnOpcode Reg
-JmpRegInsn := JmpInsnOpcode JmpRegTarget
-JmpInst := JmpDirectInsnOpcode JmpTarget
-BranchInsn := BranchInsnCode Reg, JmpRegTarget
+JmpRegInsn := JmpRegInsnOpcode JmpRegTarget
+JmpInsn := JmpInsnOpcode JmpTarget
+BranchInsn := BranchInsnCode Reg JmpTarget
 SimpleInsn := SimpleInsnOpcode
-CMPInsn := CMP Reg, Reg Cond Reg
-CMPIInsn := CMPI Reg, Reg Cond Imm
-IOInsn := IOInsnOpcode Reg, IOPort
+CMPInsn := CMPInsnOpcode Reg Reg Cond Reg
+CMPIInsn := CMPIInsnOpcode Reg Reg Cond Imm
+IOInsn := IOInsnOpcode Reg IOPort
 
 Reg := r0 | r1 | ... | r15
-JmpRegTarget := Reg\(Expr\)
-JmpTarget := Imm
+JmpRegTarget := Label | Reg\(Expr\)
+JmpTarget := Expr
 MemAddr := Variable | Reg\(Expr\)
 Cond := EQ | NE | GT | LT
-IOPort := Imm 
+IOPort := Expr
+
+ALUInsnOpcode := ADD | SUB | AND | OR | XOR | SAR | SHL | SHR | SET | CLR
+ImmALUInsnOpcode := ADDI | ANDI | ORI | XORI | SARI | SHLI | SHRI | SETI | CLRI
+MemoryInsnOpcode := ILOAD | ISTORE
+StackInsnOpcode := PUSH | POP
+JmpInsnOpcode := JMP
+JmpRegInsnOpcode := LJMP | INVOKE
+BranchInsnCode := BEQZ | BNEZ | BGTZ | BLTZ
+SimpleInsnOpcode := RET
+CMPInsnOpcode := CMPU
+CMPIInsnOpcode := CMPIU
+IOInsnOpcode := INCSR | OUTCSR
 
 Imm := Expression
 Expr := [\(](Expr Operator Expr) | Num [\)]
-Operator := +|-|*|/|&|^||
+Operator := +|-|*|/|&|^|\|
 Num := ((+|-)DecNumU) | 0xHexNum | 0bBinNum | Label | &Variable | Constant
 Identifier := [A-Za-z_][A-Za-z0-9_]*
 ``````````
@@ -324,15 +336,14 @@ And to:
 
 ````````` 
 	CONST	PP	00101101
-	CONST	N	3
-	CONST	K	2
+	CONST	N	12
+	CONST	K	12
 	CONST	M	255
 
-	DB	CW	0x07 0x06 0x05 0x00 0x00 0x00
-	DB	GP	0x02 0x03 0x01
+	DB	CW	N + K
+	DB	GP	K + 1
 	
 	PTR	ECC		CW + N
-	PTR ECCP1	ECC + 1
 	PTR ECCMOST	ECC + K - 1
 	PTR GPTOP	GP + K - 1
 
@@ -340,24 +351,24 @@ And to:
 	% Affects r1 - r8
 
 CALC_RS_ECC:
-	ADDI	r1, r0, N - 1
+	ADDI	r1 r0, N - 1
 PER_DATA_WORD:
-	ILOAD	r2, ECCMOST(r0)
-	ILOAD	r3, CW(r1)
-	XOR		r2, r2, r3
-	ADDI	r3, r0, r0
+	ILOAD	r2 r0(ECCMOST)
+	ILOAD	r3 r1(CW)
+	XOR		r2 r2, r3
+	ADDI	r3 r0, r0
 PER_REGISTER:
-	SUB		r4, r0, r3
-	ILOAD	r4, GPTOP(r4)
+	SUB		r4 r0, r3
+	ILOAD	r4 r4(GPTOP)
 	INVOKE	GF256_MUL
-	ILOAD	r4, ECCP1(r3)
-	XOR		r4, r4, r5
-	ISTORE	r4, ECC(r3)
-	ADDI	r3, r3, 1
-	ADDI	r4, r3, K
-	BLTZ	r3, PER_REGISTER
-	ADDI	r1, r1, -1
-	BGTZ	r3, PER_DATA_WORD
+	ILOAD	r4 r3(ECC + 1)
+	XOR		r4 r4, r5
+	ISTORE	r4 r3(ECC)
+	ADDI	r3 r3, 1
+	ADDI	r4 r3, K
+	BLTZ	r3 PER_REGISTER
+	ADDI	r1 r1, -1
+	BGTZ	r3 PER_DATA_WORD
 	RET
 	
 	% End of main procedure
@@ -365,11 +376,11 @@ PER_REGISTER:
 	% r5 <- GF256_MUL(r2, r4)
 	% Affects r5, r6, r7, r8
 GF256_MUL:
-	ADD		r5, r0, r0
-	ADDI	r6, r0, 7
+	ADD		r5 r0, r0
+	ADDI	r6 r0, 7
 PER_BIT:
-	SHLI	r7, r5, 1
-	ANDI	r8, r5, 0x80
+	SHLI	r7 r5, 1
+	ANDI	r8 r5, 0x80
 	JEQZ	r8, SKIP_XOR_PP
 	XORI	r7, r7, PP
 SKIP_XOR_PP:
