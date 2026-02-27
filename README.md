@@ -10,9 +10,14 @@ Unless otherwise states, all source code in this repository is published under C
 
 ## Hardware Architecture
 
+![core](doc/images/core.svg)
+
+![core](doc/images/system.svg)
+
 ### Overview
 
  * A small computer following the Harvard's architecture (i.e. separate storage for data and instruction).
+ * Single-cycle implementation.
  * RISC-like instruction set, fixed 20-bit, or else we have to struggle with microcode or FSMs. :shrug:
  * 16 8-bit registers, with read-only `r0` storing constant 0.
  * A 8-bit data-path, 8-bit SRAM address, but 12 bit addressing space for program ROM.
@@ -92,7 +97,7 @@ Unlisted addresses are not assigned to any hardware backend, thus, any operation
 ``````
 -------------------- 0xFF
 +    Display RAM   +
--------------------- 0xA0
+-------------------- 0xD0
 +                  +
 +   Ordinary Mem   +
 +                  +
