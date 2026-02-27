@@ -6,9 +6,12 @@
 `define NPC_IMM     (2'b10)
 `define NPC_RET     (2'b11)
 
+`define INTR_HANDLER_M1 (12'hFEF)
+
 module cu (
     input   wire    [19:0]  insn, 
     input   wire    [7:0]   rs_val, 
+    input   wire            jump_intr, 
     output  wire    [3:0]   alu_func, 
     output  wire            rf_wrt, 
     output  wire    [3:0]   rf_ri1, rf_ri2, rf_wi, 
@@ -19,7 +22,8 @@ module cu (
     output  wire            sram2rf, sram_wrt, 
     output  wire            imm2alu, 
     output  wire            csr2rf, csr_wrt, 
-    output  wire            jmp_with_reg
+    output  wire            jmp_with_reg, 
+    output  wire            iret
 );
 
 wire [3:0] opcode;
@@ -62,8 +66,8 @@ wire [3:0] rtype_rf_ri1, rtype_rf_ri2, rtype_rf_wi;
 wire [3:0] rtype_alu_func;
 
 assign rtype = opcode == 4'b0;
-assign operand_push = rtype & func == 4'b1010;
-assign operand_pop = rtype & func == 4'b1011;
+assign operand_push = ~jump_intr & rtype & (func == 4'b1010);
+assign operand_pop = ~jump_intr & rtype & (func == 4'b1011);
 assign rtype_rf_ri1 = rs;
 assign rtype_rf_ri2 = rt;
 assign rtype_rf_wi = rd;
@@ -96,7 +100,7 @@ assign itype = (~opcode[3] & (opcode[2] | opcode [1] | opcode[0]))
     | (~opcode[2] & opcode[1]) | (opcode[3] & ~opcode[1] & ~opcode[0]);
 assign imm_bit_man_insn = opcode == 4'b0001;
 assign mem_acc_insn = opcode[3:1] == 3'b001;
-assign sram_wrt = mem_acc_insn & opcode[0];
+assign sram_wrt = ~jump_intr & mem_acc_insn & opcode[0];
 assign itype_alu_func = mem_acc_insn ? `ALU_FN_ADD : (imm_bit_man_insn ? func : { ~opcode[3], opcode[2:0] });
 assign itype_rf_wrt = ~sram_wrt; // All insns write to RF except ISTORE
 assign sram2rf = opcode == 4'b0010;
@@ -111,7 +115,7 @@ assign itype_imm_out = imm_bit_man_insn ? { 9'b1, imm3 } : { { 4 { imm8[7] } }, 
 // BNEZ  : 1110 xxxx 01 xxxxxxxxxx - if (R[rs] != 8'b0)  PC <- (PC + SignExt(imm))[11:0]
 // BGTZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
 // BLTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'h80) PC <- (PC + SignExt(imm))[11:0]
-// RET   : 1111 0000 00 0000000000 - PC <- (CallStack.Pop() + 1)
+// RET   : 1111 0000 00 000000000x - PC <- (CallStack.Pop() + (x ? 1 : 0))
 // JMP   : 1111 xxxx 01 xxxxxxxxxx - PC <- (PC + SignExt(imm))[11:0]
 // INCSR : 1111 xxxx 10 xxxxxxxxxx - CSR[imm] <- R[rs]
 // OUTCSR: 1111 xxxx 11 xxxxxxxxxx - r[rs] <- CSR[imm]
@@ -120,32 +124,33 @@ wire btype;
 wire [3:0] btype_alu_func;
 wire branch_insn;
 wire should_branch;
-wire [1:0] btype_npc_mode;
+wire [1:0] btype_npc_mode, ret_npc_mode;
 wire ret, jmp;
 wire [3:0] branch_cond;
 wire btype_rf_wrt;
 wire [3:0] btype_rf_ri1, btype_rf_wi;
 wire [11:0] btype_imm_out;
 
-
 assign btype = opcode[3] & opcode[2] & opcode[1];
 assign branch_insn = opcode == 4'b1110;
 assign btype_alu_func = branch_insn ? { 2'b11, btype_fn } : `ALU_FN_ADD;
 assign ret = (opcode == 4'b1111) & (btype_fn == 2'b00);
 assign jmp = (opcode == 4'b1111) & (btype_fn == 2'b01);
-assign call_pop = ret;
+assign call_pop = ~jump_intr & ret;
 // We won't use the ALU to give branching conditions - saving time and an external controlling signal
 assign branch_cond = { ~rs_val[7], rs_val[7], rs_val != 8'b0, rs_val == 8'b0 };
 assign should_branch = branch_insn ? branch_cond[btype_fn] : 1'b1;  // We don't suppress jumps IF ANY
 // Todo: bit-level hacks
+assign iret = ret & ~imm12[0];
+assign ret_npc_mode = iret ? `NPC_IMM : `NPC_RET;
 assign btype_npc_mode = branch_insn ? 
-    (should_branch ? `NPC_OFFSET : `NPC_SEQ) : (jmp ? `NPC_OFFSET : (ret ? `NPC_RET : `NPC_SEQ));
+    (should_branch ? `NPC_OFFSET : `NPC_SEQ) : (jmp ? `NPC_OFFSET : (ret ? ret_npc_mode : `NPC_SEQ));
 assign btype_rf_wrt = (opcode == 4'b1111) & (btype_fn == 2'b10);
 assign btype_rf_ri1 = rs;
 assign btype_rf_wi = rs;
 assign btype_imm_out = { { 2 { imm10[9] } }, imm10 };
 assign csr2rf = (opcode == 4'b1111) & (btype_fn == 2'b10);
-assign csr_wrt = (opcode == 4'b1111) & (btype_fn == 2'b11);
+assign csr_wrt = ~jump_intr & (opcode == 4'b1111) & (btype_fn == 2'b11);
 
 // LJMP  : 1001 xxxx xxxxxxxxxxxx - PC <- (imm + SignExt(R[rs]))[11:0]
 // INVOKE: 1101 xxxx xxxxxxxxxxxx - CallStack.Push(PC); PC <- (SignExt(R[rs]) + imm)[11:0]
@@ -156,20 +161,22 @@ wire [11:0] jtype_imm_out;
 
 assign jtype = opcode[3] & ~opcode[1] & opcode[0];
 assign jtype_npc_mode = `NPC_IMM;
-assign call_push = opcode == 4'b1101;
+assign call_push = jump_intr | (opcode == 4'b1101);
 assign jtype_imm_out = imm12;
 assign jmp_with_reg = jtype;
 
-assign rf_wrt = rtype ? rtype_rf_wrt : (itype ? itype_rf_wrt : btype_rf_wrt);   // J-Type insns don't write to RF
-assign rf_ri1 = rtype ? rtype_rf_ri1 : (itype ? itype_rf_ri1 : btype_rf_ri1);   // J-Type insns don't operate on RF
+// J-Type insns don't operate on RF
+assign rf_wrt = ~jump_intr & (rtype ? rtype_rf_wrt : (itype ? itype_rf_wrt : btype_rf_wrt));
+assign rf_ri1 = rtype ? rtype_rf_ri1 : (itype ? itype_rf_ri1 : btype_rf_ri1);
 assign rf_ri2 = rtype ? rtype_rf_ri2 : itype_rf_ri2;   // Only R-Type insns & ISTORE read two registers at once.
-assign rf_wi = rtype ? rtype_rf_wi : (itype ? itype_rf_wi : btype_rf_wi);       // J-Type insns don't operate on RF
+assign rf_wi = rtype ? rtype_rf_wi : (itype ? itype_rf_wi : btype_rf_wi);
 
 assign imm2alu = itype; // Only I-Type insns send immediates to the ALU (not NPC).
-assign imm12_out = itype ? itype_imm_out : (btype ? btype_imm_out : jtype_imm_out);
+assign imm12_out = jump_intr ? `INTR_HANDLER_M1 : (itype ? itype_imm_out : (btype ? btype_imm_out : jtype_imm_out));
 
 assign alu_func = rtype ? rtype_alu_func : (itype ? itype_alu_func : btype_alu_func); // J-Type insns don't use ALU
 
-assign npc_mode = (btype | jtype) ? (btype ? btype_npc_mode : jtype_npc_mode) : `NPC_SEQ;
+// Using NPC_RET for jumps to interrupt handler, as it performs actual immediate jumps (i.e. PC <- IMM + 1)
+assign npc_mode = jump_intr ? `NPC_RET : ((btype | jtype) ? (btype ? btype_npc_mode : jtype_npc_mode) : `NPC_SEQ);
 
 endmodule

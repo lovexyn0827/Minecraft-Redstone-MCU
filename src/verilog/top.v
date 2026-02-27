@@ -12,11 +12,8 @@
  * - RF contains 4x8 bit registers, or 8x8 bit as long as the instruction set permits.
  */
 
-`define GPIN_CSR_NO     (0);
-`define GPOUT_CSR_NO    (1);
-
 module top (
-    input   wire            clk, rst, 
+    input   wire           clk, rst, 
     input   wire    [7:0]  gpin, 
     output  wire    [7:0]  gpout
 );
@@ -40,26 +37,19 @@ sram sram (
     .dat(sram_dat)
 );
 
-reg [7:0] csrs [1023:0];
+wire [9:0] csr_addr;
+wire csr_wrt;
+wire [7:0] csr_dat;
 
-assign gpout = csrs[1];
-
-// For debugging purpose
-
-wire [9:0] csr_bus_addr;
-wire [7:0] csr_bus_dat;
-wire csr_bus_wrt;
-
-assign csr_bus_dat = csr_bus_wrt ? 8'bZZZZZZZZ : csrs[csr_bus_addr];
-
-always @(posedge clk) begin
-    if (csr_bus_wrt & csr_bus_addr[0]) begin
-        csrs[csr_bus_addr] <= csr_bus_dat;
-    end else begin
-        csrs[0] <= gpin;
-        csrs[2] <= gpout ^ 8'hFF;
-    end
-end
+gpio gpio (
+    .clk(clk), 
+    .rst(rst), 
+    .csr_addr(csr_addr), 
+    .csr_wrt(csr_wrt), 
+    .csr_dat(csr_dat), 
+    .gpin(gpin), 
+    .gpout(gpout)
+);
 
 cpu cpu (
     .clk(clk), 
@@ -69,9 +59,9 @@ cpu cpu (
     .sram_addr(sram_addr), 
     .sram_wrt(sram_wrt), 
     .sram_dat(sram_dat), 
-    .csr_bus_addr(csr_bus_addr), 
-    .csr_bus_wrt(csr_bus_wrt), 
-    .csr_bus_dat(csr_bus_dat)
+    .csr_bus_addr(csr_addr), 
+    .csr_bus_wrt(csr_wrt), 
+    .csr_bus_dat(csr_dat)
 );
 
 endmodule

@@ -1,4 +1,79 @@
 module rs_ecc #(
+    parameter   RSCTL = 10'hD0, 
+    parameter   RSDIN = 10'hD1, 
+    parameter   RSADDR = 10'hD2, 
+    parameter   RSECC = 10'hD3
+) (
+    input   wire            clk, rst, 
+    input   wire    [9:0]   csr_addr, 
+    input   wire            csr_wrt, 
+    inout   wire    [7:0]   csr_dat
+);
+
+wire rs_ctl, rs_ctl_next, rs_din, rs_addr, rs_ecc;
+
+csr rs_ctl (
+    .clk(clk), 
+    .rst(rst), 
+    .csr_addr(csr_addr), 
+    .csr_wrt(csr_wrt), 
+    .csr_dat(csr_dat), 
+    .perh_wrt(1'b1), 
+    .perh_in(rs_ctl_next), 
+    .perh_out(rs_ctl)
+);
+csr rs_din (
+    .clk(clk), 
+    .rst(rst), 
+    .csr_addr(csr_addr), 
+    .csr_wrt(csr_wrt), 
+    .csr_dat(csr_dat), 
+    .perh_wrt(1'b0), 
+    .perh_in(), 
+    .perh_out(rs_din)
+);
+csr rs_addr (
+    .clk(clk), 
+    .rst(rst), 
+    .csr_addr(csr_addr), 
+    .csr_wrt(csr_wrt), 
+    .csr_dat(csr_dat), 
+    .perh_wrt(1'b0), 
+    .perh_in(), 
+    .perh_out(rs_addr)
+);
+csr rs_ecc (
+    .clk(clk), 
+    .rst(rst), 
+    .csr_addr(csr_addr), 
+    .csr_wrt(csr_wrt), 
+    .csr_dat(csr_dat), 
+    .perh_wrt(1'b1), 
+    .perh_in(rs_ecc), 
+    .perh_out()
+);
+
+wire rs_din_rdy, rs_ecc_rdy, rs_req_wd;
+
+assign { rs_din_rdy } = rs_ctl[2];
+assign { rs_ecc_rdy, rs_req_wd } = rs_ctl_next[1:0];
+
+assign rs_ctl_next[7:2] = rs_ctl[7:2];
+
+rs_ecc_impl impl (
+    .clk(clk), 
+    .rst(rst), 
+    .sdat_in(rs_din), 
+    .sdat_in_rdy(rs_din_rdy), 
+    .ecc_addr(rs_addr), 
+    .rdy(rs_ecc_rdy), 
+    .req_word(rs_req_wd), 
+    .ecc_out(rs_ecc)
+);
+
+endmodule
+
+module rs_ecc_impl #(
     parameter   N = 12,             // Message length
     parameter   K = 12,             // ECC length
     parameter   PP = 8'b00101101,   // Primitive
@@ -68,5 +143,13 @@ always @(posedge clk) begin
         end
     end
 end
+
+endmodule
+
+module rs_ecc_interface (
+    input   wire    [7:0]   address, 
+    inout   wire    [7:0]   data
+);
+
 
 endmodule

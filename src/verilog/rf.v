@@ -13,7 +13,7 @@ assign rd2 = ri2 == 0 ? 8'b0 : regs[ri2];
 always @(posedge clk) begin
     if (rst) begin
         for (integer i = 1; i < 16; i = i + 1) begin
-            regs[i] = 8'b0;
+            regs[i] <= 8'b0;
         end
     end else if (wrt & (wi != 4'b0)) begin
         regs[wi] <= wd;

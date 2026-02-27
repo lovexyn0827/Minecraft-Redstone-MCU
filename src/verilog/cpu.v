@@ -9,7 +9,8 @@ module cpu (
     inout   wire    [7:0]   sram_dat, 
 
     output  wire    [9:0]   csr_bus_addr, 
-    output  wire            csr_bus_wrt, 
+    output  wire            csr_bus_wrt,
+    output  wire            csr_bus_intr,  
     inout   wire    [7:0]   csr_bus_dat
 );
 
@@ -20,6 +21,17 @@ assign imem_addr = pc;
 
 always @(posedge clk) begin
     pc <= rst ? 12'h010 : next_pc;
+end
+
+wire handling_intr, iret, jump_intr;
+reg intr, suppress_intr;
+
+assign handling_intr = intr & ~iret;
+assign jump_intr = intr & ~suppress_intr;
+
+always @(posedge clk) begin
+    intr <= csr_bus_intr;
+    suppress_intr <= handling_intr;
 end
 
 wire [3:0] alu_func;
@@ -46,6 +58,7 @@ assign csr_bus_addr = imm12[9:0];
 cu cu (
     .insn(insn), 
     .rs_val(rf_rd1), 
+    .jump_intr(jump_intr), 
     .alu_func(alu_func), 
     .operand_push(operand_push), 
     .operand_pop(operand_pop), 
@@ -62,7 +75,8 @@ cu cu (
     .imm2alu(imm2alu), 
     .csr2rf(csr2rf),
     .csr_wrt(csr_bus_wrt), 
-    .jmp_with_reg(jmp_with_reg)
+    .jmp_with_reg(jmp_with_reg), 
+    .iret(iret)
 );
 
 wire [11:0] call_stack_out;
@@ -85,6 +99,7 @@ npc npc (
     .imm_target(npc_imm_target), 
     .offset(npc_offset), 
     .mode(npc_mode), 
+    .intr(intr), 
     .next_pc(next_pc)
 );
 

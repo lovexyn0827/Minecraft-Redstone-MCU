@@ -70,8 +70,7 @@ The complete list of CSRs:
 `````````
 Addr.	Name  	I/O	Description
 0x00-01	PC		I	Program counter
-0x02	CSP		I	Call stack pointer
-0x80	SP		I	Operand stack pointer
+0x80	IRQ		I	Active IRQ selected by hardware
 0x81	CSW		I	Control status sord
 0x82-83	INTCFG	O	Interrupt config
 0x84-85	GPICFG	O	General purpose input ports config
@@ -105,6 +104,8 @@ Unlisted addresses are not assigned to any hardware backend, thus, any operation
 There can be up to 2 interrupt sources in the MCU. No priority can be specified, but one may mask some interrupt sources or assign them to GPI pins to detect various edges.
 
 This feature may be dropped if it takes to much to switch between contexts. (`INTPC`, etc.?)
+
+We are using a semi-software interruption handling, that is, as interruptions arrives, the hardware invokes the main interruption handler located in the system routine area, uses it to push `r1` - `r6` into the stack for later software restoration and further transfer its control to the upcoming handler attached to the IRQ number proposed by the priority decoder.
 
 ## ISA and Assembly Language
 
@@ -166,9 +167,9 @@ XORI  : 1100 xxxx xxxx xxxxxxxx - R[rt] <- R[rs] ^ imm
 ``````
 BEQZ  : 1110 xxxx 00 xxxxxxxxxx - if (R[rs] == 8'b0)  PC <- (PC + SignExt(imm))[11:0]
 BNEZ  : 1110 xxxx 01 xxxxxxxxxx - if (R[rs] != 8'b0)  PC <- (PC + SignExt(imm))[11:0]
-BGTZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- (PC + SignExt(imm))[11:0]
-BLTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] <= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
-RET   : 1111 0000 00 0000000000 - PC <- (CallStack.Pop() + 1)
+BGEZ  : 1110 xxxx 10 xxxxxxxxxx - if (R[rs] <= 8'h7F) PC <- (PC + SignExt(imm))[11:0]
+BLTZ  : 1110 xxxx 11 xxxxxxxxxx - if (R[rs] >= 8'h80) PC <- (PC + SignExt(imm))[11:0]
+RET   : 1111 0000 00 000000000x - PC <- (CallStack.Pop() + (x ? 1 : 0)); if (~x) INTR <- 0
 JMP   : 1111 0000 01 xxxxxxxxxx - PC <- (PC + SignExt(imm))[11:0]
 INCSR : 1111 xxxx 10 xxxxxxxxxx - R[rs] <- CSR[imm]
 OUTCSR: 1111 xxxx 11 xxxxxxxxxx - CSR[imm] <- R[rs]

@@ -4,6 +4,8 @@
 // LJMP   :	1001 xxxx xxxxxxxxxxxx - PC <- (imm + SignExt(R[rs]))[11:0]
 // INVOKE : 1101 xxxx xxxxxxxxxxxx - CallStack.Push(PC); PC <- (SignExt(R[rs]) + imm)[11:0]
 
+`define IRQ_HANDLER 12'hC00
+
 module npc (
     input   wire    [11:0]  prev_pc, 
     input   wire    [11:0]  imm_target, 
@@ -15,7 +17,7 @@ module npc (
 // 00: PC <- PC + offset
 // 01: PC <- PC + 1
 // 10: PC <- IMM + offset
-// 11: PC <- PC + IMM + 1
+// 11: PC <- IMM + 1
 
 assign next_pc = (mode[1] ? imm_target : prev_pc) + (mode[0] ? 12'b1 : offset);
 

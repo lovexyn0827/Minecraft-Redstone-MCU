@@ -18,7 +18,7 @@ module imem (
 // INCSR    r4, 0x02
 // POP      r5
 // INVOKE   
-// LJMP     0x000
+// LJMP     r1(0x020)
 // ADDI     r1, r0, 0xF0
 // RET
 
@@ -36,7 +36,7 @@ always @(addr) begin
         12'h019: insn <= 20'h0400A;
         12'h01A: insn <= 20'hF4802;
         12'h01B: insn <= 20'h0005B;
-        12'h01C: insn <= 20'hD001F;
+        12'h01C: insn <= 20'hD001E;
         12'h01D: insn <= 20'h91020;
         12'h01E: insn <= 20'h801F0;
         12'h01F: insn <= 20'hF0000;
