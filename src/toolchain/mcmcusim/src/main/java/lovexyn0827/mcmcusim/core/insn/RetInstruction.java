@@ -13,7 +13,7 @@ final class RetInstruction extends Instruction {
 	
 	@Override
 	public void execute(Core context) throws CoreHwException {
-		int retAddr = (context.getCallStack().pop() + 1) & 0xFFF;	// TODO (this.iret ? 0 : 1)) & 0xFFF;
+		int retAddr = (context.getCallStack().pop() + (this.iret ? 0 : 1)) & 0xFFF;
 		context.jumpTo(retAddr);
 	}
 	

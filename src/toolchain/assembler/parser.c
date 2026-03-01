@@ -354,11 +354,11 @@ uint_t parse_branch_insn(uint_t opcode, str insn_name, parse_ctx *ctx, read_head
     return gen_b_type_insn(opcode, rs, bt_funct, imm);
 }
 
-// SimpleInsn := SimpleInsnOpcode
-// SimpleInsnOpcode := RET
+// RetInsn := SimpleInsnOpcode [I]
+// RetInsnOpcode := RET
 
-uint_t parse_simple_insn(uint_t opcode, str insn_name, parse_ctx *ctx, read_head *ptr) {
-    return opcode << 16;
+uint_t parse_ret_insn(uint_t opcode, str insn_name, parse_ctx *ctx, read_head *ptr) {
+    return (opcode << 16) | (at_line_end(ptr) ? 0x1 : 0x0);
 }
 
 // CMPInsn := CMPInsnOpcode Reg Reg Cond Reg
@@ -499,7 +499,7 @@ void register_insns() {
     register_insn("BGTZ", parse_branch_insn, OP_BGTZ, FN_NIL, BF_BGTZ);
     register_insn("BLTZ", parse_branch_insn, OP_BLTZ, FN_NIL, BF_BLTZ);
 
-    register_insn("RET", parse_simple_insn, OP_RET, FN_NIL, BF_RET);
+    register_insn("RET", parse_ret_insn, OP_RET, FN_NIL, BF_RET);
 
     register_insn("CMPU", parse_cmp_insn, OP_CMPU, FN_CMPU_PREFIX, BF_NIL);
 

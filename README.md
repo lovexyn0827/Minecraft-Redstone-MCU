@@ -217,7 +217,7 @@ StackInsn := StackInsnOpcode Reg
 JmpRegInsn := JmpRegInsnOpcode JmpRegTarget
 JmpInsn := JmpInsnOpcode JmpTarget
 BranchInsn := BranchInsnCode Reg JmpTarget
-SimpleInsn := SimpleInsnOpcode
+RetInsn := SimpleInsnOpcode [I]
 CMPInsn := CMPInsnOpcode Reg Reg Cond Reg
 CMPIInsn := CMPIInsnOpcode Reg Reg Cond Imm
 IOInsn := IOInsnOpcode Reg IOPort
@@ -236,7 +236,7 @@ StackInsnOpcode := PUSH | POP
 JmpInsnOpcode := JMP
 JmpRegInsnOpcode := LJMP | INVOKE
 BranchInsnCode := BEQZ | BNEZ | BGTZ | BLTZ
-SimpleInsnOpcode := RET
+RetInsnOpcode := RET
 CMPInsnOpcode := CMPU
 CMPIInsnOpcode := CMPIU
 IOInsnOpcode := INCSR | OUTCSR
@@ -336,6 +336,7 @@ A simple compiler of a specialized and reduced dialect of C:
 - Only integer types - `uintxx_t`, `intxx_t`, and their pointers - are supported;
 - Operators for set & unset: `<|` and `<&`;
 - Pointers must be constant;
+- No divide, conditional or short circuit logical operator;
 - No custom types (`structs` or `unions`), or string literals;
 - All locals are stored in registers - compilation may fail with too many locals;
 - Address of external function prototypes: `uint8_t func(uint8_t x) = 0x100;`;
