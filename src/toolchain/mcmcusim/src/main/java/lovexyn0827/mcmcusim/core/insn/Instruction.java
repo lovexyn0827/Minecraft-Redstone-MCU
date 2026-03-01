@@ -36,11 +36,11 @@ public abstract class Instruction {
 		return this.binary;
 	}
 	
-	private static int clipBitRange(int in, int from, int len) {
+	static int clipBitRange(int in, int from, int len) {
 		return (in >> from) & ((1 << len) - 1);
 	}
 	
-	private static int signExt(int in, int inBits) {
+	static int signExt(int in, int inBits) {
 		return in | (-1 << inBits);
 	}
 
@@ -65,19 +65,19 @@ public abstract class Instruction {
 	}
 	
 	static int getImm3(int insn) {
-		return signExt(clipBitRange(insn, 5, 3), 3);
+		return clipBitRange(insn, 5, 3);
 	}
 	
 	static int getImm8(int insn) {
-		return signExt(clipBitRange(insn, 0, 8), 8);
+		return clipBitRange(insn, 0, 8);
 	}
 	
 	static int getImm10(int insn) {
-		return signExt(clipBitRange(insn, 0, 10), 10);
+		return clipBitRange(insn, 0, 10);
 	}
 	
 	static int getImm12(int insn) {
-		return signExt(clipBitRange(insn, 0, 12), 12);
+		return clipBitRange(insn, 0, 12);
 	}
 	
 	static int getBTypeFunct(int insn) {

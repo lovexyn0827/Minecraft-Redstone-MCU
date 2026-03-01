@@ -11,7 +11,7 @@ final class BranchInstruction extends Instruction {
 	BranchInstruction(int insn) throws MalformedInstructionException {
 		super(insn);
 		this.rs = Instruction.getRs(insn);
-		this.imm = Instruction.getImm10(insn);
+		this.imm = signExt(Instruction.getImm10(insn), 10);
 		this.bTypeFunct = Instruction.getBTypeFunct(insn);
 	}
 
@@ -45,7 +45,7 @@ final class BranchInstruction extends Instruction {
 	@Override
 	public String deassemble() {
 		String insnName = INSN_NAMES.get(this.bTypeFunct);
-		return String.format("%d r%d %d", insnName, this.rs, this.imm);
+		return String.format("%s r%d %d", insnName, this.rs, this.imm);
 	}
 	
 	@Override

@@ -12,12 +12,12 @@ class JmpInstruction extends Instruction {
 
 	@Override
 	public void execute(Core context) {
-		int target = (context.getPC() + this.imm) & 0xFFF;
+		int target = (context.getPC() + Instruction.signExt(this.imm, 10)) & 0xFFF;
 		context.jumpTo(target);
 	}
 	
 	@Override
 	public String deassemble() {
-		return String.format("JMP %d", this.imm);
+		return String.format("JMP %d", Instruction.signExt(this.imm, 10));
 	}
 }

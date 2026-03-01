@@ -3,7 +3,10 @@ package lovexyn0827.mcmcusim.core;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import lovexyn0827.mcmcusim.core.insn.Instruction;
+import lovexyn0827.mcmcusim.periphal.GPIO;
+import lovexyn0827.mcmcusim.periphal.GlyphRom;
 import lovexyn0827.mcmcusim.periphal.Periphal;
+import lovexyn0827.mcmcusim.periphal.ReedSolomonECC;
 
 public final class Core {
 	private static final int PROG_ENTRY = 0x010;
@@ -24,6 +27,9 @@ public final class Core {
 		this.operandStack = new Stack(32, 8);
 		this.periphals = new Int2ObjectOpenHashMap<>();
 		this.periphals.defaultReturnValue(Periphal.DUMMY);
+		this.registerPeriphal(new GPIO());
+		this.registerPeriphal(new ReedSolomonECC(3, 2, new byte[] { 2, 3, 1 }, 0x1D));
+		this.registerPeriphal(new GlyphRom("D:/tom-thumb-new.png", 4, 6));
 		this.reset();
 	}
 	
@@ -33,6 +39,10 @@ public final class Core {
 		insn.execute(this);
 		if (this.shouldIncreasementPC) {
 			this.pc++;
+		}
+
+		for (Periphal periphal : this.periphals.values()) {
+			periphal.tick();
 		}
 	}
 	

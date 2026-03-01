@@ -33,6 +33,6 @@ final class IOInstruction extends Instruction {
 	
 	@Override
 	public String deassemble() {
-		return String.format("%s r%d r0x%03x", this.write ? "INCSR" : "OUTCSR", this.rs, this.imm);
+		return String.format("%s r%d 0x%03x", this.write ? "OUTCSR" : "INCSR", this.rs, this.imm);
 	}
 }

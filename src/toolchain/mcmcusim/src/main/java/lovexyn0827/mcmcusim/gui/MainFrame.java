@@ -26,11 +26,13 @@ public class MainFrame extends JFrame {
 	private InstructionTable insnTable;
 	private SramTable ramTable;
 	private RegisterTable regTable;
+	private StackTable stackTable;
 	private CSRTable csrTable;
 	private VirtualDisplay display;
 	private JScrollPane insnScrollPane;
 	private JScrollPane ramScrollPane;
 	private JScrollPane registerScrollPane;
+	private JScrollPane stackScrollPane;
 	private JScrollPane csrScrollPane;
 	private Core core = new Core();
 	private boolean running = false;
@@ -43,12 +45,14 @@ public class MainFrame extends JFrame {
 	private boolean[] breakPoints = new boolean[4096];
 	private boolean resumingFromBreakPoint = false;
 	private TimerTask currentTickTask;
+	private File prevProgImage;
 	
 	public MainFrame(String fileName) {
 		super();
 		if (fileName != null) {
 			try {
-				this.core.getInsnMemory().load(new File(fileName));
+				this.prevProgImage = new File(fileName);
+				this.core.getInsnMemory().load(this.prevProgImage);
 			} catch (IOException e) {
 				System.err.println("Failed to open image file!");
 				e.printStackTrace();
@@ -68,8 +72,8 @@ public class MainFrame extends JFrame {
 	 * |       |          |          |
 	 * |       |   SRAM   |   CSR    |
 	 * | Insns |=====================|
-	 * |       |   Regs   |   Disp   |
-	 * |       |          |          |
+	 * |       | Reg |  S |   Disp   |
+	 * |       |     |  S |          |
 	 * |=============================|
 	 */
 	
@@ -95,11 +99,13 @@ public class MainFrame extends JFrame {
 		rightInspectPanel.setLayout(new BorderLayout(5, 5));
 		inspectPanel.add(rightInspectPanel, BorderLayout.EAST);
 		
-		// Regs & Disp
+		// Regs & Stack & Disp
 		JPanel bottomInspectPanel = new JPanel();
 		bottomInspectPanel.setLayout(new BorderLayout(5, 5));
 		this.registerScrollPane = new JScrollPane(this.regTable = new RegisterTable());
 		bottomInspectPanel.add(this.registerScrollPane, BorderLayout.WEST);
+		this.stackScrollPane = new JScrollPane(this.stackTable = new StackTable());
+		bottomInspectPanel.add(this.stackScrollPane);
 		bottomInspectPanel.add(this.display = new VirtualDisplay(), BorderLayout.EAST);
 		rightInspectPanel.add(bottomInspectPanel, BorderLayout.SOUTH);
 		
@@ -128,6 +134,22 @@ public class MainFrame extends JFrame {
 			}
 		});
 		toolsPanel.add(loadBtn);
+		JButton reloadBtn = new JButton("Reload");
+		reloadBtn.addActionListener((ae) -> {
+			if (this.prevProgImage != null) {
+				try {
+					this.core.getInsnMemory().load(this.prevProgImage);
+					this.core.reset();
+					this.running = false;
+					this.updateStatus();
+					this.reload();
+				} catch (IOException e) {
+					JOptionPane.showMessageDialog(this, e.getMessage());
+					e.printStackTrace();
+				}
+			}
+		});
+		toolsPanel.add(reloadBtn);
 		JButton stepBtn = new JButton("Step");
 		stepBtn.addActionListener((ae) -> {
 			this.resumingFromBreakPoint = true;
@@ -148,6 +170,8 @@ public class MainFrame extends JFrame {
 		resetBtn.addActionListener((ae) -> {
 			this.core.reset();
 			this.running = false;
+			this.updateStatus();
+			this.reload();
 		});
 		toolsPanel.add(resetBtn);
 		JButton fasterBtn = new JButton("Faster");
@@ -174,7 +198,8 @@ public class MainFrame extends JFrame {
 		int height = this.getHeight() - 40;
 		this.insnScrollPane.setPreferredSize(new Dimension((int) (width * 0.4), (int) (height * 0.9)));
 		this.ramScrollPane.setPreferredSize(new Dimension((int) (width * 0.3), (int) (height * 0.45)));
-		this.registerScrollPane.setPreferredSize(new Dimension((int) (width * 0.3), (int) (height * 0.45)));
+		this.registerScrollPane.setPreferredSize(new Dimension((int) (width * 0.15), (int) (height * 0.45)));
+		this.stackScrollPane.setPreferredSize(new Dimension((int) (width * 0.15), (int) (height * 0.45)));
 		this.csrScrollPane.setPreferredSize(new Dimension((int) (width * 0.3), (int) (height * 0.45)));
 		this.display.setPreferredSize(new Dimension((int) (width * 0.3), (int) (height * 0.45)));
 		
@@ -260,6 +285,7 @@ public class MainFrame extends JFrame {
 		int pc = this.core.getPC();
 		this.insnTable.reload(this.core.getInsnMemory(), this.breakPoints);
 		this.regTable.reload(this.core.getRegFile(), pc);
+		this.stackTable.reload(this.core.getCallStack(), this.core.getOperandStack());
 		this.csrTable.reload(this.core.getPeriphals());
 		this.ramTable.reload(this.core.getDataMemory());
 		this.display.reload(this.core.getDataMemory());
@@ -269,9 +295,10 @@ public class MainFrame extends JFrame {
 	}
 	
 	void updateStatus() {
-		String statusLine = String.format("%s, %d IPS, targeting %d MSPI", 
+		String statusLine = String.format("%s, %d IPS, or %.02f MSPI (targeted %d)", 
 				this.running ? "Running" : "Stopped", 
 				this.ticksSinceLastSecond, 
+				1000F / this.ticksSinceLastSecond, 
 				this.tickPeriod);
 		this.statusLabel.setText(statusLine);
 		this.ticksSinceLastSecond = 0;

@@ -29,8 +29,8 @@ class VirtualDisplay extends Canvas {
 		for (int i = 208; i < 256; i++) {
 			int word = this.dataMemory.read(i);
 			for (int j = 0; j < 8; j++) {
-				if ((word & (1 << j)) != 0) {
-					// Column-major
+				if ((word & (0x1 << j)) != 0) {
+					// Column-major, least-significant bit first
 					int x = (i - 208) / 2;
 					int y = (i * 8 + j) % 16;
 					g.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);

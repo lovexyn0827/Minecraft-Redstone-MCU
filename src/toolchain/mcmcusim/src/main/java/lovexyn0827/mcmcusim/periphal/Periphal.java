@@ -1,5 +1,6 @@
 package lovexyn0827.mcmcusim.periphal;
 
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 
@@ -11,6 +12,10 @@ public interface Periphal {
 	int readCsr(int csr);
 	void writeCsr(int csr, int val);
 	IntSet getCsrNumbers();
+	
+	static IntSet buildCsrNumberSet(int ... in) {
+		return IntSets.unmodifiable(new IntOpenHashSet(in));
+	}
 	
 	static final class Dummy implements Periphal {
 		@Override

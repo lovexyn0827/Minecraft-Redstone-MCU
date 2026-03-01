@@ -33,4 +33,26 @@ public final class Stack {
 	public void reset() {
 		this.backend.clear();
 	}
+
+	public int debugGet(int row) {
+		return row < this.backend.size() ? this.backend.getInt(row) : 0;
+	}
+
+	public void debugSet(int row, int newVal) {
+		if (row < this.backend.size()) {
+			this.backend.set(row, newVal);
+		}
+	}
+
+	public int getWordLength() {
+		return this.wordLen;
+	}
+
+	public int getCapacity() {
+		return this.capacity;
+	}
+
+	public int debugGetPointer() {
+		return this.backend.size();
+	}
 }

@@ -17,20 +17,22 @@ final class ALUImmInstruction extends Instruction {
 		int opcode = Instruction.getOpcode(insn);
 		this.rs = Instruction.getRs(insn);
 		this.rt = Instruction.getRt(insn);
-		this.imm = Instruction.getImm8(insn);
 		int funct;
 		if (opcode == Opcodes.BITMANIP) {
 			funct = Instruction.getFunct(insn);
 			this.insnName = INSN_NAMES_BITMANIP.get(funct);
 			this.condCodeName = null;
+			this.imm = Instruction.getImm3(insn);
 		} else if (opcode >= Opcodes.CMPIU_EQ & opcode <= Opcodes.CMPIU_LT) {
 			funct = opcode | FunctCodes.CMPU_EQ;
 			this.insnName = "CMPIU";
 			this.condCodeName = ALUInstruction.COND_CODE_NAMES.get(opcode & 0x3);
+			this.imm = Instruction.getImm8(insn);
 		} else {
 			funct = opcode ^ 0x8;
 			this.insnName = INSN_NAMES.get(opcode);
 			this.condCodeName = null;
+			this.imm = Instruction.getImm8(insn);
 		}
 		
 		this.op = ALUInstruction.OPERATION_BY_FUNC.get(funct);
