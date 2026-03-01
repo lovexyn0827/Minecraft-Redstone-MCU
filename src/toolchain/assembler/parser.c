@@ -291,6 +291,10 @@ uint_t parse_imm_alu_insn(uint_t opcode, str insn_name, parse_ctx *ctx, read_hea
     if (is_bit_manip_insn(opcode)) {
         uint_t funct;
         HASH_MAP_GET(INSN_FUNCT, insn_name, funct, str, uint_t, str_equal);
+        if (funct == FN_NIL) {
+            error("Unrecognized instruction: %s\n", insn_name);
+        }
+
         imm = (imm << 5) | funct;
     }
 
@@ -473,11 +477,11 @@ void register_insns() {
     register_insn("ANDI", parse_imm_alu_insn, OP_ANDI, FN_NIL, BF_NIL);
     register_insn("ORI", parse_imm_alu_insn, OP_ORI, FN_NIL, BF_NIL);
     register_insn("XORI", parse_imm_alu_insn, OP_XORI, FN_NIL, BF_NIL);
-    register_insn("SARI", parse_imm_alu_insn, OP_SARI, FN_NIL, BF_NIL);
-    register_insn("SHLI", parse_imm_alu_insn, OP_SHLI, FN_NIL, BF_NIL);
-    register_insn("SHRI", parse_imm_alu_insn, OP_SHRI, FN_NIL, BF_NIL);
-    register_insn("SETI", parse_imm_alu_insn, OP_SETI, FN_NIL, BF_NIL);
-    register_insn("CLRI", parse_imm_alu_insn, OP_CLRI, FN_NIL, BF_NIL);
+    register_insn("SARI", parse_imm_alu_insn, OP_SARI, FN_SAR, BF_NIL);
+    register_insn("SHLI", parse_imm_alu_insn, OP_SHLI, FN_SHL, BF_NIL);
+    register_insn("SHRI", parse_imm_alu_insn, OP_SHRI, FN_SHR, BF_NIL);
+    register_insn("SETI", parse_imm_alu_insn, OP_SETI, FN_SET, BF_NIL);
+    register_insn("CLRI", parse_imm_alu_insn, OP_CLRI, FN_CLR, BF_NIL);
 
     register_insn("ILOAD", parse_memory_insn, OP_ILOAD, FN_NIL, BF_NIL);
     register_insn("ISTORE", parse_memory_insn, OP_ISTORE, FN_NIL, BF_NIL);
