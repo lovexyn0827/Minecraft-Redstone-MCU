@@ -285,6 +285,68 @@ LOOP:
 	JMP		START
 ```````
 
+## Toolchain
+
+### Assembler
+
+`````
+asm [-t] [-v] [-s] [-o file] [-f format] -i input
+
+-t: Run tests
+-v: Version
+-s: Show binary
+-o: Assemble and output
+-f: Output format (default: bin)
+    b: Binary IM image of 32-bit words
+    v: Verilog module of IM
+    l: Logisim ROM image file
+-i: Input
+`````
+
+
+
+### Simulator
+
+A GUI simulator written in Java, to run and debug compiled programs interactively.
+
+GUI layout:
+
+``````
+|=============================|
+|       Debugging Tools       |
+|=============================|
+|       |          |          |
+|       |   SRAM   |   CSR    |
+| Insns |=====================|
+|       | Reg |  S |   Disp   |
+|       |     |  S |          |
+|=============================|
+``````
+
+### Program Loader
+
+Generates ROM schematics from binary.
+
+### Reduced C Compiler
+
+A simple compiler of a specialized and reduced dialect of C:
+
+- `if`, `for`, `while`, `do` and `switch` blocks, basic expressions;
+- Functions and `inline` keyword;
+- Only integer types - `uintxx_t`, `intxx_t`, and their pointers - are supported;
+- Operators for set & unset: `<|` and `<&`;
+- Pointers must be constant;
+- No custom types (`structs` or `unions`), or string literals;
+- All locals are stored in registers - compilation may fail with too many locals;
+- Address of external function prototypes: `uint8_t func(uint8_t x) = 0x100;`;
+- Minimal preprocessor directives: `#define CONST ...` , `#include "head.h"`;
+- Explicit `register` keyword works for global variables;
+- Minimal standard library: `incsr()`, `outcsr()`, `push()` and `pop()`;
+
+It compiles into assembly instead of binaries to allow further manual modification.
+
+One should understand how it compiles to code effectively.
+
 ## Program Usage
 
 ### Basic Calculator
