@@ -16,9 +16,9 @@ assign dout = regs[pointer];
 
 always @(posedge clk) begin
     if (rst) begin
-        pointer <= 6'b111111;
+        pointer <= 0;
         for (integer i = 0; i < DEPTH; i = i + 1) begin
-            regs[i] <= 8'b0;
+            regs[i] <= 0;
         end
     end else if (push) begin
         regs[pointer + 1'b1] <= din;
