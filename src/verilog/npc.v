@@ -8,14 +8,16 @@
 
 module npc (
     input   wire    [11:0]  prev_pc, 
-    input   wire    [19:0]  insn, 
-    input   wire    [7:0]   rs_val, 
-    input   wire    [11:0]  call_stack_out, 
+    input   wire    [19:16] insn_19_to_16, 
+    input   wire    [11:0]  insn_11_to_0,
     input   wire            intr, 
-    output  wire    [3:0]   rs, 
     output  wire            call_push,
     output  wire            call_pop, 
     output  wire            iret, 
+    output  wire            jump_at_id, 
+    output  wire            jump_at_ex, 
+    output  wire            bxxz, 
+    output  wire    [1:0]   branch_cond, 
     output  wire    [11:0]  next_pc
 );
 
@@ -23,10 +25,9 @@ wire [3:0] opcode;
 wire [1:0] btype_fn;
 wire [11:0] imm12;
 
-assign opcode = insn[19:16];
-assign btype_fn = insn[11:10];
+assign opcode = insn_19_to_16;
+assign btype_fn = insn_11_to_0[11:10];
 
-wire bxxz;
 wire ret;
 wire jmp;
 wire ljmp;
@@ -37,27 +38,25 @@ assign ret = (opcode == 4'b1111) & (btype_fn == 2'b00);
 assign jmp = (opcode == 4'b1111) & (btype_fn == 2'b01);
 assign ljmp = opcode == 4'b1001;
 assign invoke = opcode == 4'b1101;
-assign imm12 = (ljmp | invoke) ? insn[11:0] : { { 2 { insn[9] } }, insn[9:0] } ;
+assign imm12 = (ljmp | invoke) ? insn_11_to_0[11:0] : { { 2 { insn_11_to_0[9] } }, insn_11_to_0[9:0] } ;
 assign call_push = invoke | intr;
 assign call_pop = ret & ~intr;
 assign iret = ret & imm12[0];
-assign rs = insn[15:12];
-
-wire should_branch;
-
-assign should_branch = { rs_val == 8'b0, rs_val != 8'b0, ~rs_val[7], rs_val[7] } [btype_fn];
+assign jump_at_id = jmp;
+assign jump_at_ex = bxxz | ret | ljmp | invoke; 
 
 wire abs_jmp;
 wire offset_eff;
 
 assign abs_jmp = ljmp | invoke | ret;
-assign offset_eff = (bxxz & should_branch) | jmp | iret;
+assign offset_eff = jmp | iret;
+assign branch_cond = btype_fn;
 
 wire [11:0] imm_target;
 wire [11:0] offset;
 
-assign imm_target = ret ? call_stack_out : imm12;
-assign offset = (ljmp | invoke) ? { { 4 { rs_val[7] } }, rs_val } : imm12;
+assign imm_target = imm12;
+assign offset = imm12;
 
 assign next_pc = intr ? `IRQ_HANDLER : ((abs_jmp ? prev_pc : imm_target) + (offset_eff ? 12'b1 : offset));
 

@@ -20,6 +20,9 @@ module cpu (
 reg [11:0] pc;
 wire [11:0] next_pc;
 
+// We simply increasement PC naively, jumps will be handled @ the ID or EX stage
+assign next_pc = next_pc_from_EX_eff ? next_pc_from_EX : (next_pc_from_ID_eff ? next_pc_from_ID : pc + 12'b1);
+
 always @(posedge clk) begin
     pc <= rst ? 12'h010 : next_pc;
 end
@@ -35,38 +38,6 @@ always @(posedge clk) begin
     suppress_intr <= rst ? 1'b0 : handling_intr;
 end
 
-wire call_push, call_pop;
-wire [11:0] call_stack_out;
-
-stack #( .WLEN(12), .DEPTH(8), .PTR_LEN(3) ) call_stack (
-    .din(pc), 
-    .dout(call_stack_out), 
-    .clk(clk), 
-    .rst(rst), 
-    .push(call_push), 
-    .pop(call_pop)
-);
-
-wire [3:0] rs_NPC;
-wire [7:0] rs_val_NPC;
-wire bypass_ID2IF;
-wire bypass_EX2IF;
-wire bypass_MEM2IF;
-wire bypass_WB2IF;
-
-npc npc (
-    .prev_pc(pc), 
-    .insn(insn), 
-    .rs_val(rs_val_NPC), 
-    .call_stack_out(call_stack_out), 
-    .intr(intr), 
-    .rs(rs_NPC), 
-    .call_push(call_push), 
-    .call_pop(call_pop), 
-    .iret(iret), 
-    .next_pc(next_pc)
-);
-
 assign imem_addr = pc;
 
 // ================ ID stage ================
@@ -75,10 +46,39 @@ assign imem_addr = pc;
 reg [19:0] insn_ID;
 reg intr_ID;
 
+// Unused
+reg [11:0] pc_ID;
+
 always @(posedge clk) begin
     insn_ID <= insn;
     intr_ID <= jump_intr;
+    pc_ID <= pc;
 end
+
+wire call_push, call_pop;
+wire bxxz;
+wire [1:0] branch_cond;
+
+// We determine when to generate branch targets at ID - and targets themselves at ID or EX
+// So that we are not referencing R[rs] or the call stack at this moment
+wire next_pc_from_ID_eff;
+wire [11:0] next_pc_from_ID;
+wire next_pc_from_EX_eff_ID;
+
+npc npc (
+    .prev_pc(pc), 
+    .insn_19_to_16(insn[19:16]), 
+    .insn_11_to_0(insn[11:0]), 
+    .intr(intr), 
+    .call_push(call_push), 
+    .call_pop(call_pop), 
+    .iret(iret), 
+    .jump_at_id(next_pc_from_ID_eff), 
+    .jump_at_ex(next_pc_from_EX_eff_ID), 
+    .bxxz(bxxz), 
+    .branch_cond(branch_cond), 
+    .next_pc(next_pc_from_ID)
+);
 
 wire [3:0] alu_func;
 wire operand_push, operand_pop;
@@ -111,16 +111,14 @@ cu cu (
     .csr_wrt(csr_wrt)
 );
 
-wire [7:0] rf_wdat;
-
 rf rf (
     .clk(clk), 
     .rst(rst), 
-    .wrt(rf_wrt), 
+    .wrt(rf_wrt_WB), 
     .ri1(rf_ri1), 
     .ri2(rf_ri2), 
-    .wi(rf_wi), 
-    .wd(rf_wdat), 
+    .wi(rf_wi_WB), 
+    .wd(rf_wdat_WB), 
     .rd1(rf_rd1), 
     .rd2(rf_rd2)
 );
@@ -130,20 +128,30 @@ rf rf (
 // Pipelining latches
 reg imm2alu_EX;
 reg [3:0] alu_func_EX;
+reg next_pc_from_EX_eff_EX;
+reg [3:0] rf_ri1_EX;
+reg [3:0] rf_ri2_EX;
+reg [11:0] pc_EX;
+reg call_push_EX;
+reg call_pop_EX;
+reg bxxz_EX;
+reg [1:0] branch_cond_EX;
 
 // Unused, only for progation
 reg [7:0] rf_rd1_EX;
 reg [7:0] rf_rd2_EX;
 reg sram_wrt_EX;
-reg operand_pop_EX;
-reg operand_push_EX;
 reg [9:0] imm10_EX;
+reg operand_push_EX;
+reg operand_pop_EX;
 reg csr_bus_wrt_EX;
 reg csr2rf_EX;
 reg sram2rf_EX;
+reg rf_wrt_EX;
+reg [3:0] rf_wi_EX;
 
 always @(posedge clk) begin
-    // All signals are fresh
+    // All signals except for PC are fresh
     imm2alu_EX <= imm2alu;
     alu_func_EX <= alu_func;
     rf_rd1_EX <= rf_rd1;
@@ -155,11 +163,43 @@ always @(posedge clk) begin
     csr_bus_wrt_EX <= csr_wrt;
     csr2rf_EX <= csr2rf;
     sram2rf_EX <= sram2rf;
+    pc_EX <= pc_ID;
+    call_push_EX <= call_push;
+    call_pop_EX <= call_pop;
+    next_pc_from_EX_eff_EX <= next_pc_from_EX_eff_ID;
+    rf_wrt_EX <= rf_wrt;
+    rf_wi_EX <= rf_wi;
+    rf_ri1_EX <= rf_ri1;
+    rf_ri2_EX <= rf_ri2;
+    bxxz_EX <= bxxz;
+    branch_cond_EX <= branch_cond;
 end
 
+// Forwarding
+
+wire [7:0] rf_rd1_EX_forwarded;
+wire [7:0] rf_rd2_EX_forwarded;
+wire bypass_rf_rd1_MEM2EX;
+wire bypass_rf_rd1_WB2EX;
+wire bypass_rf_rd2_MEM2EX;
+wire bypass_rf_rd2_WB2EX;
+wire [7:0] rf_rd1_MEM2EX;
+wire [7:0] rf_rd1_WB2EX;
+wire [7:0] rf_rd2_MEM2EX;
+wire [7:0] rf_rd2_WB2EX;
+
+assign bypass_rf_rd1_MEM2EX = ((rf_wi_MEM != 4'b0) & (rf_wi_MEM == rf_ri1_EX));
+assign bypass_rf_rd1_WB2EX = ((rf_wi_WB != 4'b0) & (rf_wi_WB == rf_ri1_EX));
+assign bypass_rf_rd2_MEM2EX = ((rf_wi_MEM != 4'b0) & (rf_wi_MEM == rf_ri2_EX));
+assign bypass_rf_rd2_WB2EX = ((rf_wi_WB != 4'b0) & (rf_wi_WB == rf_ri2_EX));
+assign rf_rd1_EX_forwarded = bypass_rf_rd1_MEM2EX ? rf_rd1_MEM2EX :
+        (bypass_rf_rd1_WB2EX ? rf_rd1_WB2EX : rf_rd1_EX);
+assign rf_rd2_EX_forwarded = bypass_rf_rd2_MEM2EX ? rf_rd2_MEM2EX :
+        (bypass_rf_rd2_WB2EX ? rf_rd2_WB2EX : rf_rd2_EX);
+
 wire [7:0] alu_in1, alu_in2;
-assign alu_in1 = rf_rd1_EX;
-assign alu_in2 = imm2alu_EX ? imm10_EX[7:0] : rf_rd2_EX;
+assign alu_in1 = rf_rd1_EX_forwarded;
+assign alu_in2 = imm2alu_EX ? imm10_EX[7:0] : rf_rd2_EX_forwarded;
 
 alu alu (
     .a(alu_in1), 
@@ -167,6 +207,33 @@ alu alu (
     .z(alu_out), 
     .func(alu_func_EX)
 );
+
+wire [11:0] call_stack_out;
+
+stack #( .WLEN(12), .DEPTH(8), .PTR_LEN(3) ) call_stack (
+    .din(pc_EX), 
+    .dout(call_stack_out), 
+    .clk(clk), 
+    .rst(rst), 
+    .push(call_push_EX), 
+    .pop(call_pop_EX)
+);
+
+wire [7:0] rs_val_EX;
+wire should_branch;
+assign rs_val_EX = rf_rd1_EX_forwarded;
+assign should_branch = { rs_val_EX == 8'b0, rs_val_EX != 8'b0, ~rs_val_EX[7], rs_val_EX[7] } [branch_cond_EX];
+
+wire [11:0] branch_to;
+assign branch_to = pc_EX + { { 2 { imm10_EX[9] } }, imm10_EX };
+
+wire [11:0] ljmp_to;
+assign ljmp_to = pc_EX + { { 4 { rs_val_EX[7] } }, rs_val_EX };
+
+wire next_pc_from_EX_eff = next_pc_from_EX_eff_EX;
+wire [11:0] next_pc_from_EX;
+
+assign next_pc_from_EX = call_pop ? call_stack_out + 1 : (bxxz_EX ? (should_branch ? branch_to : pc_EX) : ljmp_to);
 
 // ================ MEM stage ================
 
@@ -183,6 +250,8 @@ reg csr_bus_wrt_MEM;
 // Unused, only for progation
 reg sram2rf_MEM;
 reg csr2rf_MEM;
+reg rf_wrt_MEM;
+reg [3:0] rf_wi_MEM;
 
 always @(posedge clk) begin
     // Fresh: alu_out
@@ -198,6 +267,8 @@ always @(posedge clk) begin
     csr2rf_MEM <= csr2rf_EX;
     sram2rf_MEM <= sram2rf_EX;
     csr2rf_MEM <= csr2rf_EX;
+    rf_wrt_MEM <= rf_wrt_EX;
+    rf_wi_MEM <= rf_wi_EX;
 end
 
 wire [7:0] operand_stack_out;
@@ -218,6 +289,9 @@ assign csr_bus_dat = csr_bus_wrt_MEM ? rf_rd1_MEM : 8'bZZZZZZZZ;
 assign csr_bus_addr = imm10_MEM;
 assign csr_bus_wrt = csr_bus_wrt_MEM;
 
+assign rf_rd1_MEM2EX = alu_out_MEM;
+assign rf_rd2_MEM2EX = alu_out_MEM;
+
 // ================ WB stage ================
 
 // Pipelining latches, all of which are used
@@ -228,18 +302,27 @@ reg operand_pop_WB;
 reg [7:0] operand_stack_out_WB;
 reg csr2rf_WB;
 reg [7:0] csr_bus_dat_WB;
+reg rf_wrt_WB;
+reg [3:0] rf_wi_WB;
 
 always @(posedge clk) begin
     // Fresh: CSRDat, SRAMDat, OSOut
-    alu_out_WB <= alu_out_WB;
+    alu_out_WB <= alu_out_MEM;
     sram2rf_WB <= sram2rf_MEM;
     sram_dat_WB <= sram_dat;
     operand_pop_WB <= operand_pop_MEM;
     operand_stack_out_WB <= operand_stack_out;
     csr_bus_dat_WB <= csr_bus_dat;
     csr2rf_WB <= csr2rf_MEM;
+    rf_wrt_WB <= rf_wrt_MEM;
+    rf_wi_WB <= rf_wi_MEM;
 end
 
-assign rf_wdat = sram2rf_WB ? sram_dat_WB : (operand_pop_WB ? operand_stack_out_WB : (csr2rf_WB ? csr_bus_dat_WB : alu_out_WB));
+wire [7:0] rf_wdat_WB;
+
+assign rf_wdat_WB = sram2rf_WB ? sram_dat_WB : (operand_pop_WB ? operand_stack_out_WB : (csr2rf_WB ? csr_bus_dat_WB : alu_out_WB));
+
+assign rf_rd1_WB2EX = rf_wdat_WB;
+assign rf_rd2_WB2EX = rf_wdat_WB;
 
 endmodule

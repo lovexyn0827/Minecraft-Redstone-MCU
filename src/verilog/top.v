@@ -61,7 +61,8 @@ cpu cpu (
     .sram_dat(sram_dat), 
     .csr_bus_addr(csr_addr), 
     .csr_bus_wrt(csr_wrt), 
-    .csr_bus_dat(csr_dat)
+    .csr_bus_dat(csr_dat), 
+    .csr_bus_intr(1'b0)
 );
 
 endmodule
