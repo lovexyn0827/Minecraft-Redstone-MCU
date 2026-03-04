@@ -1,3 +1,5 @@
+`define NOP (20'h00000)
+
 module cpu (
     input   wire            clk, rst, 
 
@@ -50,7 +52,7 @@ reg intr_ID;
 reg [11:0] pc_ID;
 
 always @(posedge clk) begin
-    insn_ID <= insn;
+    insn_ID <= next_pc_from_ID_eff ? `NOP : insn;;
     intr_ID <= jump_intr;
     pc_ID <= pc;
 end
@@ -65,10 +67,12 @@ wire next_pc_from_ID_eff;
 wire [11:0] next_pc_from_ID;
 wire next_pc_from_EX_eff_ID;
 
-npc npc (
+wire [19:0] insn_filtered_ID;
+
+npc_id npc_id (
     .prev_pc(pc), 
-    .insn_19_to_16(insn[19:16]), 
-    .insn_11_to_0(insn[11:0]), 
+    .insn_19_to_16(insn_ID[19:16]), 
+    .insn_11_to_0(insn_ID[11:0]), 
     .intr(intr), 
     .call_push(call_push), 
     .call_pop(call_pop), 
@@ -156,22 +160,22 @@ always @(posedge clk) begin
     alu_func_EX <= alu_func;
     rf_rd1_EX <= rf_rd1;
     rf_rd2_EX <= rf_rd2;
-    sram_wrt_EX <= sram_wrt;
-    operand_pop_EX <= operand_pop;
-    operand_push_EX <= operand_push;
+    sram_wrt_EX <= ~next_pc_from_EX_eff & sram_wrt;
+    operand_pop_EX <= ~next_pc_from_EX_eff & operand_pop;
+    operand_push_EX <= ~next_pc_from_EX_eff & operand_push;
     imm10_EX <= imm10;
-    csr_bus_wrt_EX <= csr_wrt;
+    csr_bus_wrt_EX <= ~next_pc_from_EX_eff & csr_wrt;
     csr2rf_EX <= csr2rf;
     sram2rf_EX <= sram2rf;
     pc_EX <= pc_ID;
-    call_push_EX <= call_push;
-    call_pop_EX <= call_pop;
-    next_pc_from_EX_eff_EX <= next_pc_from_EX_eff_ID;
-    rf_wrt_EX <= rf_wrt;
+    call_push_EX <= ~next_pc_from_EX_eff & call_push;
+    call_pop_EX <= ~next_pc_from_EX_eff & call_pop;
+    next_pc_from_EX_eff_EX <= ~next_pc_from_EX_eff & next_pc_from_EX_eff_ID;
+    rf_wrt_EX <= ~next_pc_from_EX_eff & rf_wrt;
     rf_wi_EX <= rf_wi;
     rf_ri1_EX <= rf_ri1;
     rf_ri2_EX <= rf_ri2;
-    bxxz_EX <= bxxz;
+    bxxz_EX <= ~next_pc_from_EX_eff & bxxz;
     branch_cond_EX <= branch_cond;
 end
 
@@ -219,21 +223,21 @@ stack #( .WLEN(12), .DEPTH(8), .PTR_LEN(3) ) call_stack (
     .pop(call_pop_EX)
 );
 
-wire [7:0] rs_val_EX;
-wire should_branch;
-assign rs_val_EX = rf_rd1_EX_forwarded;
-assign should_branch = { rs_val_EX == 8'b0, rs_val_EX != 8'b0, ~rs_val_EX[7], rs_val_EX[7] } [branch_cond_EX];
-
-wire [11:0] branch_to;
-assign branch_to = pc_EX + { { 2 { imm10_EX[9] } }, imm10_EX };
-
-wire [11:0] ljmp_to;
-assign ljmp_to = pc_EX + { { 4 { rs_val_EX[7] } }, rs_val_EX };
-
-wire next_pc_from_EX_eff = next_pc_from_EX_eff_EX;
+wire next_pc_from_EX_eff;
 wire [11:0] next_pc_from_EX;
 
-assign next_pc_from_EX = call_pop ? call_stack_out + 1 : (bxxz_EX ? (should_branch ? branch_to : pc_EX) : ljmp_to);
+npc_ex npc_ex (
+    .prev_pc(pc_EX), 
+    .rs_val(rf_rd1_EX_forwarded), 
+    .imm10(imm10_EX), 
+    .bxxz(bxxz_EX), 
+    .branch_cond(branch_cond_EX), 
+    .call_pop(call_pop_EX), 
+    .call_stack_out(call_stack_out), 
+    .branch_on_ex(next_pc_from_EX_eff_EX), 
+    .next_pc_eff(next_pc_from_EX_eff), 
+    .next_pc(next_pc_from_EX)
+);
 
 // ================ MEM stage ================
 

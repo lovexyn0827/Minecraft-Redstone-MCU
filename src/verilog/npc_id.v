@@ -6,7 +6,7 @@
 
 `define IRQ_HANDLER 12'hFF0
 
-module npc (
+module npc_id (
     input   wire    [11:0]  prev_pc, 
     input   wire    [19:16] insn_19_to_16, 
     input   wire    [11:0]  insn_11_to_0,
