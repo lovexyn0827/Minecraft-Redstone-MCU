@@ -13,7 +13,7 @@ module cu (
     output  wire            rf_wrt, 
     output  wire    [3:0]   rf_ri1, rf_ri2, rf_wi, 
     output  wire            operand_push, operand_pop,
-    output  wire    [9:0]  imm10_out, 
+    output  wire    [11:0]  imm12_out, 
     output  wire            sram2rf, sram_wrt, 
     output  wire            imm2alu, 
     output  wire            csr2rf, csr_wrt
@@ -24,6 +24,7 @@ wire [3:0] rs, rt, rd;
 wire [2:0] imm3;
 wire [7:0] imm8;
 wire [9:0] imm10;
+wire [11:0] imm12;
 wire [3:0] func;
 wire [1:0] btype_fn;
 
@@ -35,6 +36,7 @@ assign func = insn[3:0];
 assign imm3 = insn[7:5];
 assign imm8 = insn[7:0];
 assign imm10 = insn[9:0];
+assign imm12 = insn[11:0];
 assign btype_fn = insn[11:10];
 
 // ADD   : 0000 xxxx xxxx xxxx 0000 - R[rd] <- (R[rs] + R[rt])[7:0]
@@ -85,7 +87,7 @@ wire imm_bit_man_insn;
 wire mem_acc_insn;
 wire itype_rf_wrt;
 wire [3:0] itype_rf_ri1, itype_rf_ri2, itype_rf_wi;
-wire [9:0] itype_imm_out;
+wire [11:0] itype_imm_out;
 
 assign itype = (~opcode[3] & (opcode[2] | opcode [1] | opcode[0])) 
     | (~opcode[2] & opcode[1]) | (opcode[3] & ~opcode[1] & ~opcode[0]);
@@ -99,7 +101,7 @@ assign itype_rf_ri1 = rs;
 assign itype_rf_ri2 = rt;
 assign itype_rf_wi = rt;
 // Unified signed ext. is fine since imm12 -> imm8 when entering the ALU
-assign itype_imm_out = imm_bit_man_insn ? { 7'b1, imm3 } : { { 2 { imm8[7] } }, imm8 };
+assign itype_imm_out = imm_bit_man_insn ? { 9'b1, imm3 } : { { 4 { imm8[7] } }, imm8 };
 
 
 // BEQZ  : 1110 xxxx 00 xxxxxxxxxx - if (R[rs] == 8'b0)  PC <- (PC + SignExt(imm))[11:0]
@@ -115,21 +117,22 @@ wire [3:0] btype_alu_func;
 wire branch_insn;
 wire btype_rf_wrt;
 wire [3:0] btype_rf_ri1, btype_rf_wi;
-wire [9:0] btype_imm_out;
+wire [11:0] btype_imm_out;
 
 assign branch_insn = opcode == 4'b1110;
 assign btype_alu_func = branch_insn ? { 2'b11, btype_fn } : `ALU_FN_ADD;
 assign btype_rf_wrt = (opcode == 4'b1111) & (btype_fn == 2'b10);
 assign btype_rf_ri1 = rs;
 assign btype_rf_wi = rs;
-assign btype_imm_out = imm10;
+assign btype_imm_out = { { 2 { imm10[9] } }, imm10 };
 assign csr2rf = (opcode == 4'b1111) & (btype_fn == 2'b10);
 assign csr_wrt = ~intr & (opcode == 4'b1111) & (btype_fn == 2'b11);
 
 // LJMP  : 1001 xxxx xxxxxxxxxxxx - PC <- (imm + SignExt(R[rs]))[11:0]
 // INVOKE: 1101 xxxx xxxxxxxxxxxx - CallStack.Push(PC); PC <- (SignExt(R[rs]) + imm)[11:0]
 
-// No J-Type insns must be handled
+wire jtype;
+assign jtype = (opcode == 4'b1001) | (opcode == 4'b1101);
 
 // J-Type insns don't operate on RF
 assign rf_wrt = ~intr & (rtype ? rtype_rf_wrt : (itype ? itype_rf_wrt : btype_rf_wrt));
@@ -138,7 +141,7 @@ assign rf_ri2 = rtype ? rtype_rf_ri2 : itype_rf_ri2;   // Only R-Type insns & IS
 assign rf_wi = rtype ? rtype_rf_wi : (itype ? itype_rf_wi : btype_rf_wi);
 
 assign imm2alu = itype; // Only I-Type insns send immediates to the ALU (not NPC).
-assign imm10_out = itype ? itype_imm_out : btype_imm_out;
+assign imm12_out = jtype ? imm12 : itype ? itype_imm_out : btype_imm_out;
 
 assign alu_func = rtype ? rtype_alu_func : (itype ? itype_alu_func : btype_alu_func); // J-Type insns don't use ALU
 
