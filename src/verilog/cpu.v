@@ -288,7 +288,6 @@ always @(posedge clk) begin
     imm10_MEM <= imm12_EX[9:0];
     csr_bus_wrt_MEM <= csr_bus_wrt_EX;
     csr2rf_MEM <= csr2rf_EX;
-    csr2rf_MEM <= csr2rf_EX;
     rf_wrt_MEM <= rf_wrt_EX;
     rf_wi_MEM <= rf_wi_EX;
 end
