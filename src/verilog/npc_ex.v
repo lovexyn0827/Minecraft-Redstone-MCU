@@ -13,7 +13,9 @@ module npc_ex (
 );
 
 wire should_branch;
-assign should_branch = { rs_val[7], ~rs_val[7], rs_val != 8'b0, rs_val == 8'b0 } [branch_cond];
+wire [3:0] branch_cond_impls;
+assign branch_cond_impls = { rs_val[7], ~rs_val[7], rs_val != 8'b0, rs_val == 8'b0 };
+assign should_branch = branch_cond_impls[branch_cond];
 
 wire [11:0] branch_to;
 assign branch_to = prev_pc + imm12;
