@@ -4,7 +4,15 @@ Resources for the MCU for the central museum of [my Minecraft 1.16 survival save
 
 Unless otherwise states, all source code in this repository is published under CC-0.
 
-> Macro Controlling Units are also MCUs, isn't it?
+> Macrocontroller Units are also MCUs, isn't it?
+
+Contents:
+
+- How to Get Started
+- Hardware Architecture
+- ISA and Assembly Language
+- Peripherals
+- Toolchain
 
 ## How to Get Started
 
@@ -17,7 +25,7 @@ Unless otherwise states, all source code in this repository is published under C
 ### Overview
 
  * A small computer following the Harvard's architecture (i.e. separate storage for data and instruction).
- * Single-cycle implementation.
+ * Classic five-level pipelined implementation.
  * RISC-like instruction set, fixed 20-bit, or else we have to struggle with microcode or FSMs. :shrug:
  * 16 8-bit registers, with read-only `r0` storing constant 0.
  * A 8-bit data-path, 8-bit SRAM address, but 12 bit addressing space for program ROM.
@@ -284,6 +292,8 @@ LOOP:
 	OUTCSR  R2, GPOB
 	JMP		START
 ```````
+
+## Peripherals
 
 ## Toolchain
 
