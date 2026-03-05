@@ -327,22 +327,26 @@ GUI layout:
 
 Generates ROM schematics from binary.
 
-### Reduced C Compiler
+### Reduced C Compiler (MCMCUCC)
 
 A simple compiler of a specialized and reduced dialect of C:
 
 - `if`, `for`, `while`, `do` and `switch` blocks, basic expressions;
 - Functions and `inline` keyword;
-- Only integer types - `uintxx_t`, `intxx_t`, and their pointers - are supported;
+- Only 8-bit integer types - `uint8_t`, `int8_t`, and their pointers - are supported;
+- `const` keyword - `const` global variables won't take up SRAM spaces, but cannot be pointed.
 - Operators for set & unset: `<|` and `<&`;
-- Pointers must be constant;
-- No divide, conditional or short circuit logical operator;
-- No custom types (`structs` or `unions`), or string literals;
+- `likely` and `unlikely` keyword for conditional blocks, and static branch prediction.
+- No short circuit logical operator;
+- No custom types (`typedef`, `enum`, `structs` or `union`), or string literals;
+- Arrays declaration is allowed, but initialization is unsupported.
 - All locals are stored in registers - compilation may fail with too many locals;
 - Address of external function prototypes: `uint8_t func(uint8_t x) = 0x100;`;
-- Minimal preprocessor directives: `#define CONST ...` , `#include "head.h"`;
+- `goto` and function call with a 8-bit variable offset: `goto label + var;`, `(func + var) (x);`;
+- No preprocessor support.
+- Only one compilation unit is allowed.
 - Explicit `register` keyword works for global variables;
-- Minimal standard library: `incsr()`, `outcsr()`, `push()` and `pop()`;
+- Minimal standard library: `incsr()`, `outcsr()`, `push()`, `pop()`;
 
 It compiles into assembly instead of binaries to allow further manual modification.
 
