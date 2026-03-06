@@ -13,6 +13,7 @@ Contents:
 - ISA and Assembly Language
 - Peripherals
 - Toolchain
+- Example Programs
 
 ## How to Get Started
 
@@ -25,7 +26,7 @@ Contents:
 ### Overview
 
  * A small computer following the Harvard's architecture (i.e. separate storage for data and instruction).
- * Classic five-level pipelined implementation.
+ * Classic five-staged pipelined implementation.
  * RISC-like instruction set, fixed 20-bit, or else we have to struggle with microcode or FSMs. :shrug:
  * 16 8-bit registers, with read-only `r0` storing constant 0.
  * A 8-bit data-path, 8-bit SRAM address, but 12 bit addressing space for program ROM.
@@ -119,6 +120,27 @@ There can be up to 2 interrupt sources in the MCU. No priority can be specified,
 This feature may be dropped if it takes to much to switch between contexts. (`INTPC`, etc.?)
 
 We are using a semi-software interruption handling, that is, as interruptions arrives, the hardware invokes the main interruption handler located in the system routine area, uses it to push `r1` - `r6` into the stack for later software restoration and further transfer its control to the upcoming handler attached to the IRQ number proposed by the priority decoder.
+
+### Instruction Pipeline
+
+We have implemented our MCU core with a classic five-staged instruction pipeline, that is:
+
+- Instruction Fetching (IF): 
+  - Fetches the instruction pointed by PC from IM.
+  - Increments PC, or jump if any instruction requires.
+- Instruction Decoding (ID):
+  - Decodes the instruction fetched, and emits controlling signals and read RF.
+  - Handles forwarding logic.
+  - Calculates `NextPC` for `JMP` instruction.
+- Execution (EX):
+  - ALU works.
+  - Calculates `NextPC` for other control flow related instruction.
+  - Pushes into / pops from the call stack.
+- Memory (MEM):
+  - Reads from / writes to the SRAM or bus.
+  - Pushes into / pops from the operand stack.
+- Writing Back (WB):
+  - Writes pending modifications to RF.
 
 ## ISA and Assembly Language
 
@@ -362,7 +384,7 @@ It compiles into assembly instead of binaries to allow further manual modificati
 
 One should understand how it compiles to code effectively.
 
-## Program Usage
+## Example Programs
 
 ### Basic Calculator
 
