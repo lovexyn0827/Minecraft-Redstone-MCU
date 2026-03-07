@@ -155,7 +155,7 @@ wire [7:0] rf_rd2_MEM2ID;
 wire [7:0] rf_rd2_WB2ID;
 
 wire should_not_forward_MEM2ID;
-assign should_not_forward_MEM2ID = sram2rf_MEM | csr2rf_MEM | operand_pop_MEM;
+assign should_not_forward_MEM2ID = sram2rf_MEM | csr2rf_MEM;
 
 assign bypass_rf_rd1_EX2ID = rf_wrt_EX & ((rf_wi_EX != 4'b0) & (rf_wi_EX == rf_ri1_ID));
 assign bypass_rf_rd1_MEM2ID = ~should_not_forward_MEM2ID & rf_wrt_MEM & ((rf_wi_MEM != 4'b0) & (rf_wi_MEM == rf_ri1_ID));
@@ -316,8 +316,8 @@ assign csr_bus_dat = csr_bus_wrt_MEM ? rf_rd1_MEM : 8'bZZZZZZZZ;
 assign csr_bus_addr = imm10_MEM;
 assign csr_bus_wrt = csr_bus_wrt_MEM;
 
-assign rf_rd1_MEM2ID = alu_out_MEM;
-assign rf_rd2_MEM2ID = alu_out_MEM;
+assign rf_rd1_MEM2ID = operand_pop_MEM ? operand_stack_out_MEM : alu_out_MEM;
+assign rf_rd2_MEM2ID = operand_pop_MEM ? operand_stack_out_MEM : alu_out_MEM;
 
 // ================ WB stage ================
 
