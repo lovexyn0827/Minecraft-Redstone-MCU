@@ -22,7 +22,7 @@ void create_verilog(FILE *fp, insn_t *insns) {
     fprintf(fp, "module imem (\n");
     fprintf(fp, "    input wire [11:0] addr,\n");
     fprintf(fp, "    output  reg [19:0] insn\n");
-    fprintf(fp, "));\n");
+    fprintf(fp, ");\n");
     fprintf(fp, "\n");
     fprintf(fp, "always @(addr) begin\n");
     fprintf(fp, "    case (addr)\n");
@@ -37,7 +37,7 @@ void create_verilog(FILE *fp, insn_t *insns) {
     fprintf(fp, "    endcase\n");
     fprintf(fp, "end\n");
     fprintf(fp, "\n");
-    fprintf(fp, "endmodule\n");
+    fprintf(fp, "endmodule\n\n");
 }
 
 void create_logisim(FILE *fp, insn_t *insns) {
