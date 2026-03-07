@@ -60,7 +60,8 @@ end
 wire insert_bubble;
 assign insert_bubble = next_pc_from_EX_eff 
         | (sram2rf_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)))
-        | (csr2rf_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)));
+        | (csr2rf_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)))
+        | (operand_pop_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)));
 
 wire call_push_ID, call_pop_ID;
 wire bxxz_ID;
@@ -153,12 +154,16 @@ wire [7:0] rf_rd2_EX2ID;
 wire [7:0] rf_rd2_MEM2ID;
 wire [7:0] rf_rd2_WB2ID;
 
+wire should_not_forward_MEM2ID;
+assign should_not_forward_MEM2ID = sram2rf_MEM | csr2rf_MEM | operand_pop_MEM;
+
 assign bypass_rf_rd1_EX2ID = rf_wrt_EX & ((rf_wi_EX != 4'b0) & (rf_wi_EX == rf_ri1_ID));
-assign bypass_rf_rd1_MEM2ID = rf_wrt_MEM & ((rf_wi_MEM != 4'b0) & (rf_wi_MEM == rf_ri1_ID));
+assign bypass_rf_rd1_MEM2ID = ~should_not_forward_MEM2ID & rf_wrt_MEM & ((rf_wi_MEM != 4'b0) & (rf_wi_MEM == rf_ri1_ID));
 assign bypass_rf_rd1_WB2ID = rf_wrt_WB & ((rf_wi_WB != 4'b0) & (rf_wi_WB == rf_ri1_ID));
 assign bypass_rf_rd2_EX2ID = rf_wrt_EX & ((rf_wi_EX != 4'b0) & (rf_wi_EX == rf_ri2_ID));
-assign bypass_rf_rd2_MEM2ID = rf_wrt_MEM & ((rf_wi_MEM != 4'b0) & (rf_wi_MEM == rf_ri2_ID));
+assign bypass_rf_rd2_MEM2ID = ~should_not_forward_MEM2ID & rf_wrt_MEM & ((rf_wi_MEM != 4'b0) & (rf_wi_MEM == rf_ri2_ID));
 assign bypass_rf_rd2_WB2ID = rf_wrt_WB & ((rf_wi_WB != 4'b0) & (rf_wi_WB == rf_ri2_ID));
+
 assign rf_rd1_ID_forwarded = bypass_rf_rd1_EX2ID ? rf_rd1_EX2ID
         : bypass_rf_rd1_MEM2ID ? rf_rd1_MEM2ID 
         : bypass_rf_rd1_WB2ID ? rf_rd1_WB2ID : rf_rd1_ID;
@@ -311,12 +316,8 @@ assign csr_bus_dat = csr_bus_wrt_MEM ? rf_rd1_MEM : 8'bZZZZZZZZ;
 assign csr_bus_addr = imm10_MEM;
 assign csr_bus_wrt = csr_bus_wrt_MEM;
 
-assign rf_rd1_MEM2ID = sram2rf_MEM ? sram_dat 
-        : operand_pop_MEM ? operand_stack_out_MEM 
-        : csr2rf_MEM ? csr_bus_dat : alu_out_MEM;
-assign rf_rd2_MEM2ID = sram2rf_MEM ? sram_dat 
-        : operand_pop_MEM ? operand_stack_out_MEM 
-        : csr2rf_MEM ? csr_bus_dat : alu_out_MEM;
+assign rf_rd1_MEM2ID = alu_out_MEM;
+assign rf_rd2_MEM2ID = alu_out_MEM;
 
 // ================ WB stage ================
 

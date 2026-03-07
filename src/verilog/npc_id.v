@@ -45,19 +45,9 @@ assign iret = ret & imm12[0];
 assign jump_at_id = jmp;
 assign jump_at_ex = bxxz | ret | ljmp | invoke; 
 
-wire abs_jmp;
-wire offset_eff;
-
-assign abs_jmp = ljmp | invoke | ret;
-assign offset_eff = jmp | iret;
 assign branch_cond = btype_fn;
 
-wire [11:0] imm_target;
-wire [11:0] offset;
-
-assign imm_target = imm12;
-assign offset = imm12;
-
-assign next_pc = intr ? `IRQ_HANDLER : ((abs_jmp ? prev_pc : imm_target) + (offset_eff ? 12'b1 : offset));
+// Only JMP insn and interruction has to be handled here
+assign next_pc = intr ? `IRQ_HANDLER : (prev_pc + imm12);
 
 endmodule
