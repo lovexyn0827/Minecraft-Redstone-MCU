@@ -19,8 +19,16 @@ uint_t warning_cnt = 0;
 int main(int argc, str *argv) {
     init_infrastructures();
     if (argc == 1) {
-        // Test cases
-        return test_main();
+        puts("asm [-t] [-v] [-o file] [-f format] -i input");
+        puts("\t-t: Run tests");
+        puts("\t-v: Version");
+        puts("\t-o: Assemble and output");
+        puts("\t-f: Output format (default: bin)");
+        puts("\t\tb: Binary IM image of 32-bit words");
+        puts("\t\tv: Verilog module of IM");
+        puts("\t\tl: Logisim ROM image file");
+        puts("\t-i: Input");
+        puts("\t-s: Show binary");
     } else {
         bool run_tests, show_version, show_bin;
         output_fmt format;
