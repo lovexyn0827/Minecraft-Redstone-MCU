@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 
 <svg
-	width="210mm"
-	height="90mm"
-	viewBox="0 0 840 360"
+	width="200mm"
+	height="75mm"
+	viewBox="0 0 1024 384"
 	version="1.1"
 	id="mcmcu_block_diagram"
 	xmlns="http://www.w3.org/2000/svg"
@@ -23,48 +23,96 @@
 	
 	<defs>
 		<g id="alu">
-			<polygon points="0,0 80,80 80,180 0,260 0,200 40,160 40,100 0,60" fill="#F0F0F0" stroke="black" stroke-width="1" />
-			<text x="60" y="137" class="text">ALU</text>
+			<path d="M0 0 L70 45 V115 L0 160 V115 L35 92.5 V67.5 L0 45 Z" stroke="black" stroke-width="1.5" fill="#F9FFFE" />
+			<text x="80" y="-45" class="text" transform="rotate(90)">ALU</text>
 		</g>
+		
 		<g id="mux2">
-			<polygon points="0,0 20,30 40,30 60,0" fill="#80C71F" stroke="black" stroke-width="1" />
-			<line x1="10" y1="15" x2="3" y2="15" stroke="black" stroke-width="2" />
+			<path d="M0 0 L20 10 V30 L0 40 Z" stroke="black" stroke-width="1.5" fill="#3C44AA" />
 		</g>
+		
+		<g id="mux2_long">
+			<path d="M0 0 L20 10 V50 L0 60 Z" stroke="black" stroke-width="1.5" fill="#3C44AA" />
+		</g>
+		
+		<g id="mux2_loong">
+			<path d="M0 0 L20 10 V100 L0 110 Z" stroke="black" stroke-width="1.5" fill="#3C44AA" />
+		</g>
+		
 		<g id="rf">
-			<polygon points="0,0 50,0 50,260 0,260 " fill="#F9801D" stroke="black" stroke-width="1" />
-			<text x="25" y="137" class="text">RF</text>
+			<polygon points="0,0 50,0 50,160 0,160 " fill="#FED83D" stroke="black" stroke-width="1" />
+			<text x="25" y="89" class="text">RF</text>
 		</g>
+		
 		<g id="im">
-			<polygon points="0,0 50,0 50,260 0,260 " fill="#3AB3DA" stroke="black" stroke-width="1" />
+			<polygon points="0,0 50,0 50,260 0,260 " fill="#80C71F" stroke="black" stroke-width="1" />
 			<text x="25" y="137" class="text">IM</text>
 		</g>
+		
 		<g id="cu">
-			<polygon points="0,0 50,0 50,260 0,260 " fill="#FED83D" stroke="black" stroke-width="1" />
-			<text x="25" y="137" class="text">CU</text>
+			<polygon points="0,0 50,0 50,160 0,160 " fill="#C74EBD" stroke="black" stroke-width="1" />
+			<text x="25" y="89" class="text">CU</text>
 		</g>
+		
 		<g id="sram">
-			<polygon points="0,0 50,0 50,260 0,260 " fill="#F38BAA" stroke="black" stroke-width="1" />
-			<text x="25" y="137" class="text">DM</text>
+			<polygon points="0,0 120,0 120,160 0,160 " fill="#F9801D" stroke="black" stroke-width="1" />
+			<text x="60" y="87" class="text">DM</text>
 		</g>
+		
 		<g id="stack">
-			<polygon points="0,0 50,0 50,260 0,260 " fill="#5E7C16" stroke="black" stroke-width="1" />
-			<text x="25" y="137" class="text">S</text>
+			<polygon points="0,0 50,0 50,50 0,50 " fill="#8932B8" stroke="black" stroke-width="1" />
+			<text x="25" y="32" class="text">OS</text>
+		</g>
+		
+		<g id="bus">
+			<polygon points="0,0 50,0 50,50 0,50 " fill="#169C9C" stroke="black" stroke-width="1" />
+			<text x="25" y="32" class="text">B</text>
 		</g>
 		
 		<g id="pc">
-			<polygon points="0,0 50,0 50,60 0,60" fill="#169C9C" stroke="black" stroke-width="1" />
+			<polygon points="0,0 50,0 50,60 0,60" fill="#835432" stroke="black" stroke-width="1" />
 			<text x="25" y="37" class="text">PC</text>
 			<polygon points="0,40 5,45 0,50" fill="none" stroke="black" />
 		</g>
 		
 		<g id="cs">
-			<polygon points="0,0 50,0 50,60 0,60" fill="#8932B8" stroke="black" stroke-width="1" />
-			<text x="25" y="37" class="text">CS</text>
+			<polygon points="0,0 50,0 50,70 0,70" fill="#F38BAA" stroke="black" stroke-width="1" />
+			<text x="25" y="42" class="text">CS</text>
 		</g>
 		
-		<g id="npc">
-			<polygon points="0,0 50,0 50,60 0,60" fill="#9D9D97" stroke="black" stroke-width="1" />
-			<text x="25" y="37" class="text">NPC</text>
+		<g id="npc_id">
+			<polygon points="0,0 50,0 50,70 0,70" fill="#5E7C16" stroke="black" stroke-width="1" />
+			<text x="25" y="42" class="text">ND</text>
+		</g>
+		
+		<g id="npc_ex">
+			<polygon points="0,0 50,0 50,70 0,70" fill="#9D9D91" stroke="black" stroke-width="1" />
+			<text x="25" y="42" class="text">NE</text>
+		</g>
+		
+		<g id="adder">
+			<circle cx="0" cy="0" r="12" stroke="black" stroke-width="1.5" fill="none" />
+			<line x1="-12" y1="0" x2="12" y2="0" stroke="black" stroke-width="1.5" />
+			<line x1="0" y1="-12" x2="0" y2="12" stroke="black" stroke-width="1.5" />
+		</g>
+		
+		<g id="knot">
+			<circle cx="0" cy="0" r="4" stroke="black" stroke-width="1.5" fill="black" />
+		</g>
+		
+		<g id="latch">
+			<path d="M-6 -6 h12 v12 h-12 Z" stroke="black" stroke-width="1.5" fill="white" />
+			<path d="M-6 6 L0 0 L6 6" stroke="black" stroke-width="1.5" fill="white" />
+		</g>
+		
+		<g id="or_gate">
+			<path d="M0 0 
+					a13 13 0 0 1 0 13
+					h5
+					a13 13 0 0 0 13 -6.5
+					a13 13 0 0 0 -13 -6.5
+					Z"
+					stroke="black" stroke-width="1" fill="#474F52" />
 		</g>
 		
 		<marker id="arrow" markerWidth="3" markerHeight="4" refX="2.5" refY="2" orient="auto">
@@ -73,73 +121,147 @@
 	</defs>
 	
 	<g id="top">
-		<use href="#cs" transform="translate(70, 20)" />
-		<use href="#pc" transform="translate(70, 120)" />
-		<use href="#npc" transform="translate(70, 220)" />
+		<!-- Separations -->
+		<path d="M237 0 V384" stroke="red" stroke-width="1.5" fill="none" stroke-dasharray="5, 5" />
+		<path d="M485 0 V384" stroke="red" stroke-width="1.5" fill="none" stroke-dasharray="5, 5" />
+		<path d="M680 0 V384" stroke="red" stroke-width="1.5" fill="none" stroke-dasharray="5, 5" />
+		<path d="M910 0 V384" stroke="red" stroke-width="1.5" fill="none" stroke-dasharray="5, 5" />
 		
-		<use href="#im" transform="translate(180, 20)" />
-		<use href="#cu" transform="translate(280, 20)" />
-		<use href="#rf" transform="translate(380, 20)" />
-		<use href="#alu" transform="translate(520,20)" />
-		<use href="#sram" transform="translate(650,20)" />
-		<use href="#stack" transform="translate(750,20)" />
+		<text x="118.5" y="370" class="text">IF</text>
+		<text x="361" y="370" class="text">ID</text>
+		<text x="582.5" y="370" class="text">EX</text>
+		<text x="815" y="370" class="text">MEM</text>
+		<text x="968" y="370" class="text">WB</text>
 		
-		<use href="#mux2" transform="translate(80, 188) scale(-1, 1)" />
-		<use href="#mux2" transform="translate(600, 270) rotate(90)" />
-		<use href="#mux2" transform="translate(480, 280) rotate(270)" />
+		<!-- IF -->
+		<use href="#adder" transform="translate(50, 48)" />
+		<use href="#mux2_long" transform="translate(45, 240) scale(1, 1)" />
+		<use href="#pc" transform="translate(55, 160)" />
+		<use href="#im" transform="translate(125, 60)" />
+		<use href="#mux2" transform="translate(205, 120) rotate(0)" />
 		
-		<!-- PC Loop -->
-		<path d="M120 150 H150 V250 H120" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M70 50 H60 V188" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M40 163 V188" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M50 218 V240 H70" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M50 270 V260 H70" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M95 120 V80" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M95 220 V180" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M80 160 V48 H62" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M38 48 H20 V250 H45" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M65 270 H80 V220" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M105 190 H125" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M175 130 H205" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M190 160 V150 H205" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M225 140 H280" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M50 18 V36" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		
-		<!-- PC -> IM -> CU -->
-		<path d="M150 150 H180" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M230 150 H280" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M255 40 V50 H280" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M80 48 H500 V285 H525" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M95 48 H255 V300 H280" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		
-		<!-- CU -> RF -->
-		<path d="M330 50 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M330 70 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M330 240 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M53 330 V296" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M57 340 V294" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
 		
-		<!-- RF -> ALU -->
-		<path d="M430 50 H520" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M430 240 H480" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M455 260 H480" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M510 250 H520" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<use href="#or_gate" transform="translate(202, 290) rotate(270) scale(2)" />
+		<path d="M210 330 V287" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M220 340 V287" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M215 254 V155" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
 		
-		<!-- ALU -> DM & MUX -->
-		<path d="M625 40 V50 H650" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M600 150 H650" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M600 150 H625 V280 H600" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<text x="190" y="170" class="small">NOP</text>
+		<text x="50" y="16" class="small">1</text>
 		
-		<!-- DM -> MUX -->
-		<path d="M725 40 V50 H750" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M700 150 H725 V293 H600" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<use href="#latch" transform="translate(237, 140)" />
+		<use href="#latch" transform="translate(237, 48)" />
 		
-		<!-- S -> MUX -->
-		<path d="M800 150 H825 V306 H600" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<!-- ID -->
+		<use href="#cu" transform="translate(280, 60)" />
+		<use href="#rf" transform="translate(360, 60)" />
+		<use href="#mux2" transform="translate(450, 62.5) rotate(0)" />
+		<use href="#mux2" transform="translate(450, 185.0) rotate(0)" />
+		<use href="#mux2" transform="translate(380, 0) rotate(0)" />
+		<path d="M330 140 H360" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M410 72.5 H450" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M410 195.0 H450" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M470 82.5 H585" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M470 205.0 H550" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M305 60 V10 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M365 30 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M400 20 H1020" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		
-		<!-- MUX --> 
-		<path d="M625 319 H600" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M570 300 H365 V260 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<use href="#npc_id" transform="translate(280, 250)" />
+		<use href="#mux2" transform="translate(380, 280) rotate(0)" />
+		<path d="M265 140 V270 H280" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M330 290 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M365 310 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M400 300 H525" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		
-		<!-- CU -> NPC -->
-		<path d="M330 260 H345 V300 H95 V280" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M420 330 V43 H390 V35" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M420 330 V323 H390 V315" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
 		
-		<!-- Labels -->
-		<text x="50" y="281" class="small">R[rs]</text>
-		<text x="255" y="36" class="small">R[rs]</text>
-		<text x="725" y="36" class="small">R[rs]</text>
-		<text x="625" y="36" class="small">R[rs]</text>
-		<text x="640" y="323" class="small">Bus</text>
-		<text x="444" y="265" class="small">i8</text>
-		<text x="40" y="160" class="small">i12</text>
+		<text x="360" y="35" class="small">0</text>
+		<text x="360" y="315" class="small">0</text>
+		
+		<use href="#latch" transform="translate(485, 20)" />
+		<use href="#latch" transform="translate(485, 48)" />
+		<use href="#latch" transform="translate(485, 82.5)" />
+		<use href="#latch" transform="translate(485, 205.0)" />
+		<use href="#latch" transform="translate(485, 300)" />
+		
+		<!-- EX -->
+		<use href="#npc_ex" transform="translate(525, 250)" />
+		<use href="#cs" transform="translate(605, 250)" />
+		<path d="M575 270 H605" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M605 300 H575" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M510 82.5 V270 H525" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		
+		<use href="#mux2" transform="translate(550, 177.5) rotate(0)" />
+		<use href="#alu" transform="translate(585, 60)" />
+		<path d="M560 20 V182.5" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M620 20 V82.5" stroke="black" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+		<path d="M570 197.5 H585" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M530 20 V187.5 H550" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M655 140 H940" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M510 82.5 V48 H790 V60" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M510 82.5 V48 H860 V60" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M530 205.0 V225 H710" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		
+		<use href="#knot" transform="translate(510, 82.5)" />
+		
+		<use href="#latch" transform="translate(680, 20)" />
+		<use href="#latch" transform="translate(680, 48)" />
+		<use href="#latch" transform="translate(680, 140)" />
+		<use href="#latch" transform="translate(680, 225)" />
+		
+		<!-- MEM -->
+		<use href="#sram" transform="translate(750, 160)" />
+		<use href="#stack" transform="translate(750, 60)" />
+		<use href="#bus" transform="translate(820, 60)" />
+		<path d="M870 85 H940" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M775 110 V120 H940" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M870 175 H940" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M740 20 V85 H750" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M810 20 V85 H820" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M740 20 V175 H750" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M720 140 V190 H750" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		
+		<use href="#mux2" transform="translate(710, 215) rotate(0)" />
+		<path d="M730 235 H750" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		
+		<use href="#latch" transform="translate(910, 20)" />
+		<use href="#latch" transform="translate(910, 85)" />
+		<use href="#latch" transform="translate(910, 120)" />
+		<use href="#latch" transform="translate(910, 140)" />
+		<use href="#latch" transform="translate(910, 175)" />
+		
+		<!-- WB -->
+		<use href="#mux2_loong" transform="translate(940, 75) rotate(0)" />
+		<path d="M960 130 H980 V330 H345 V190 H360" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M950 20 V80" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		
+		<!-- Bypasses -->
+		<path d="M665 140 V35" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M885 140 V35" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M980 130 V35 H435 V215 H450" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M435 92.5 H450" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		
+		<path d="M695 330 V245 H710" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		
+		<!-- To PC -->
+		<path d="M305 320 V330 H30 V290 H45" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M535 320 V340 H20 V270 H45" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 	</g>
 	
 </svg>
