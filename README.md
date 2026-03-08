@@ -35,6 +35,21 @@ Contents:
  * Memory-mapped IO, through CSRs.
  * Hardware glyph library & stack with a visible pointer.
 
+### Modules
+
+- Core: A 8-bit RISC core with a 5 staged instruction pipeline.
+  - PC (Program Counter): A 12-bit register for the address from which the next instruction is being fetched.
+  - CU (Control Unit): Generates controlling signals for the main data path.
+  - ND (Next-PC Logic at ID Stage): Generates controlling signals for control flow transferring instructions at the Instruction Decode stage.
+  - RF (Register File)
+  - ALU (Arithmetics Logic Unit)
+  - NE (Next-PC Logic at EX stage): Generates controlling signals for control flow transferring instructions at the Execution stage.
+  - CS (Call Stack): A 8 level and 12-bit wide stack for return addresses of subroutine calls.
+  - OS (Operand Stack): A 32 level and 8-bit wide stack for operands / data.
+- IM (Instruction Memory): A 20-bit ROM for up to 4096 instructions.
+- DM (Data Memory): A 256 * 8-bit RAM for runtime data. Also known as SRAM (System RAM, we do not mandate it to be a Static RAM if one could implement it in a dynamic form).
+- B (Bus): An external bus on which up to 1024 peripherals (CSRs) may attach.
+
 ### Memory Mapping
 
 We have three separate address space for instructions, stack, CSRs and data under manipulation.
@@ -71,7 +86,7 @@ No specific structure, but a (theoretically unbounded, but physically bounded by
 
 #### Call Stack
 
-Similar to the operand stack, but it is pointed by the `CSP` register and consists of 19-bit words.
+Similar to the operand stack, but it is pointed by the `CSP` register and consists of 12-bit words.
 
 #### IO Ports (CSRs)
 
@@ -141,6 +156,12 @@ We have implemented our MCU core with a classic five-staged instruction pipeline
   - Pushes into / pops from the operand stack.
 - Writing Back (WB):
   - Writes pending modifications to RF.
+
+#### Timing Behaviors of The Pipeline
+
+- Stalls for 1 CP immediately after any instruction potentially referencing the register being written to by its previous instruction transferring some "stored" data to the RF (i.e. Any instruction that have a nonzero `rs` or `rt`, where all instructions are assumed to be of R-Type, and `R[rs]` or `R[rt]` is the same register being written to by the previous instruction, and has a previous instruction reading from SRAM, operand stack, or CSRs.).
+- Stall for 1 CP immediate after any unconditional jumps, including `INVOKE` and `RET`.
+- Stall for 2 CPs immediately after any conditional branches that is taken.
 
 ## ISA and Assembly Language
 
