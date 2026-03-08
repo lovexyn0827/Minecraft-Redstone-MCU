@@ -249,12 +249,13 @@
 		<!-- WB -->
 		<use href="#mux2_loong" transform="translate(940, 75) rotate(0)" />
 		<path d="M960 130 H980 V330 H345 V190 H360" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M980 20 V34" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
 		<path d="M950 20 V80" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
 		
 		<!-- Bypasses -->
-		<path d="M665 140 V35" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M885 140 V35" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
-		<path d="M980 130 V35 H435 V215 H450" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M665 140 V34" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M885 140 V34" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
+		<path d="M980 130 V34 H435 V215 H450" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		<path d="M435 92.5 H450" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		
 		<path d="M695 330 V245 H710" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
