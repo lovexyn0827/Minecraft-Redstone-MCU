@@ -501,24 +501,20 @@ const-expr		:= cond-expr
 decl			:= decl-spec init-decl-list? ;
 decl-spec		:= storage-cl-spec decl-spec?
 					| type-spec decl-spec?
-					| type-qualifier decl-spec?
-					| func-spec decl-spec?
+					| const decl-spec?
+					| inline decl-spec?
 init-decl-list	:= init-decl | init-decl-list, init-decl
 init-decl		:= declarator | declarator = initializer
 storage-cl-spec	:= auto | register
 type-spec		:= void | int8_t | uint8_t
-type-qualifier	:= const
-func-spec		:= inline
 declarator		:= pointer? drct-declarator
 drct-declarator	:= identifier
 					| ( declarator )
-					| drct-declarator [ type-qual-list? assign-expr ]
-					| drct-declarator [ type-qualifier? * ]
-					| drct-declarator ( param-type-list )
+					| drct-declarator [ const-expr ]
+					| drct-declarator [ const? * ]
+					| drct-declarator ( param-list )
 					| drct-declarator ( identifier-list )
-pointer			:= * type-qual-list? | * type-qual-list? pointer
-type-qual-list	:= type-qualifier | type-qual-list type-qualifier
-param-type-list	:= param-list | param-list , ...
+pointer			:= * const? | * const? pointer
 param-list		:= param-decl | param-list param-decl
 param-decl		:= decl-spec declarator
 					| decl-spec abst-declarator
@@ -527,7 +523,7 @@ type-name		:= spec-qual-list abst-declarator?
 abst-declarator	:= pointer
 					| pointer? drct-abst-decl
 drct-abst-decl	:= ( abst-declarator )
-					| drct-abst-decl? ( param-type-list? )
+					| drct-abst-decl? ( param-list? )
 initializer		:= assign-expr
 
 // ****** Statements ******
@@ -537,16 +533,17 @@ stmt			:= labeled-stmt
 					| select-stmt
 					| iter-stmt
 					| jump-stmt
+likelyhood-spec	:= likely | unlikely
 labeled-stmt	:= identifier : stmt
-					| case const-expr : stmt
-					| default : stmt
+					| likelyhood-spec case const-expr : stmt
+					| likelyhood-spec default : stmt
 comp-stmt		:= { block-item-list? }
 block-item-list	:= block-item
 					| block-item-list block-item
 block-item		:= decl | stmt
 expr-stmt		:= expr? ;
-select-stmt		:= if ( expr ) stmt
-					| if ( expr ) stmt else stmt
+select-stmt		:= likelyhood-spec? if ( expr ) stmt
+					| likelyhood-spec? if ( expr ) stmt likelyhood-spec? else stmt
 					| switch ( expr ) stmt
 iter-stmt		:= while ( expr ) stmt
 					| do stmt while ( expr ) ;
