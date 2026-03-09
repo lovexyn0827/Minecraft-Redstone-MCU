@@ -405,6 +405,165 @@ It compiles into assembly instead of binaries to allow further manual modificati
 
 One should understand how it compiles to code effectively.
 
+> We don't enforce strictness as long as the grammar specification is understandable.
+
+Lexical grammar:
+
+```````
+token 		:= keyword | identifier | number | punctuator
+
+keyword 	:= break | case | const | continue | default | do | else 
+				| enum | for | goto | if | inline | int8_t | int16_t | 
+				| likely | return | sizeof | switch | void | while
+
+identifier	:= nodigit 
+				| (identifier nodigit) 
+				| (identifier digit)
+nondigit	:= _ | a | ... | z | A | ... | Z
+digit		:= 0 | ... | 9
+
+constant	:= int-const | char-const
+int-const	:= dec-const | oct-const | hex-const
+dec-const	:= nz-digit | decimal-const digit
+octal-const	:= 0 | octal-const octal-digit
+hex-const	:= hex-prefix hex-digit | hex-const hex-digit
+hex-prefix	:= 0x | 0X
+nz-digit	:= 1 | ... | 9
+oct-digit	:= 0 | ... | 7
+hex-digit	:= 0 | ... | 9 | A | ... | F | a | ... | f
+sign		:= + | -
+char-const	:= ' c-char-seq '
+c-char-seq	:= c-char | c-char-seq c-char
+c-char		:= Any character except ' and \ | escape-seq
+escape-seq	:= \' | \" | \? | \\ | \a | \b | \f | \n | \r | \t | \v
+
+punctuator	:= Any of
+				[ ] ( ) { } ++ -- & * + - ~ ! / % << >> < > <= >= == !=
+				^ | && || ? : ; = *= /= %= += -= <<= >>= &= ^= |= ,
+```````
+
+Phrase structure grammar (Only `|` and `?` must be escaped)
+
+``````
+// ****** Expressions ******
+primary-expr	:= identifier | constant | ( expr )
+postfix-expr	:= primary-expr 
+                    | postfix-expr [ expr ]
+                    | postfix-expr ( expr )
+                    | postfix-expr ++
+                    | postfix-expr --
+unary-expr		:= postfix-expr
+					| ++ unary-expr
+					| -- unary-expr
+					| unary-op unary-expr
+					| sizeof unary-expr
+					| sizeof ( type-name )
+unary-op		:= & * + - ~ !
+cast-expr		:= unary-expr
+					| \( type-name \) cast-expr
+mult-expr		:= cast-expr
+					| mult-expr * cast-expr
+					| mult-expr / cast-expr
+					| mult-expr % cast-expr
+additive-expr	:= mult-expr
+					| additive-expr + mult-expr
+					| additive-expr - mult-expr
+shift-expr		:= additive-expr
+					| shift-expr << additive-expr
+					| shift-expr >> additive-expr
+relation-expr	:= shift-expr
+					| relation-expr < shift-expr
+					| relation-expr > shift-expr
+					| relation-expr <= shift-expr
+					| relation-expr >= shift-expr
+equality-expr	:= relation-expr
+					| equality-expr == relation-expr
+					| equality-expr != relation-expr
+and-expr		:= equality-expr
+					| and-expr & equality-expr
+xor-expr		:= and-expr
+					| xor-expr ^ and-expr
+or-expr			:= xor-expr
+					| or-expr \| xor-expr
+land-expr		:= or-expr
+					| land-expr && or-expr
+lor-expr		:= land-expr
+					| lor-expr \|\| land-expr
+cond-expr		:= lor-expr
+					| lor-expr \? expr : cond-expr
+assign-expr		:= cond-expr
+					| unary-expr assign-op assign-expr
+assign-op		:= = | *= | /= | %= | += | -= | <<= | >>= | &= | ^= | \|=
+expr			:= assign-expr | expr , assign-expr
+const-expr		:= cond-expr
+
+// ****** Declarations ******
+decl			:= decl-spec init-decl-list? ;
+decl-spec		:= storage-cl-spec decl-spec?
+					| type-spec decl-spec?
+					| type-qualifier decl-spec?
+					| func-spec decl-spec?
+init-decl-list	:= init-decl | init-decl-list, init-decl
+init-decl		:= declarator | declarator = initializer
+storage-cl-spec	:= auto | register
+type-spec		:= void | int8_t | uint8_t
+type-qualifier	:= const
+func-spec		:= inline
+declarator		:= pointer? drct-declarator
+drct-declarator	:= identifier
+					| ( declarator )
+					| drct-declarator [ type-qual-list? assign-expr ]
+					| drct-declarator [ type-qualifier? * ]
+					| drct-declarator ( param-type-list )
+					| drct-declarator ( identifier-list )
+pointer			:= * type-qual-list? | * type-qual-list? pointer
+type-qual-list	:= type-qualifier | type-qual-list type-qualifier
+param-type-list	:= param-list | param-list , ...
+param-list		:= param-decl | param-list param-decl
+param-decl		:= decl-spec declarator
+					| decl-spec abst-declarator
+identifier-list	:= identifier | identifier-list , identifier
+type-name		:= spec-qual-list abst-declarator?
+abst-declarator	:= pointer
+					| pointer? drct-abst-decl
+drct-abst-decl	:= ( abst-declarator )
+					| drct-abst-decl? ( param-type-list? )
+initializer		:= assign-expr
+
+// ****** Statements ******
+stmt			:= labeled-stmt
+					| comp-stmt
+					| expr-stmt
+					| select-stmt
+					| iter-stmt
+					| jump-stmt
+labeled-stmt	:= identifier : stmt
+					| case const-expr : stmt
+					| default : stmt
+comp-stmt		:= { block-item-list? }
+block-item-list	:= block-item
+					| block-item-list block-item
+block-item		:= decl | stmt
+expr-stmt		:= expr? ;
+select-stmt		:= if ( expr ) stmt
+					| if ( expr ) stmt else stmt
+					| switch ( expr ) stmt
+iter-stmt		:= while ( expr ) stmt
+					| do stmt while ( expr ) ;
+					| for ( expr? ; expr? ; expr? ) stmt
+					| for ( decl expr? ; expr? ) stmt
+jump-stmt		:= goto identifier ;
+					| continue ;
+					| break ;
+					| return expr? ;
+
+// ****** Larger Building Blocks ******
+compile-unit	:= extern-decl | compile-unit
+extern-decl		:= func-def | decl
+func-def		:= decl-spec declarator decl-list? comp-stmt
+decl-list		:= decl | decl-list decl
+``````
+
 ## Example Programs
 
 ### Basic Calculator
