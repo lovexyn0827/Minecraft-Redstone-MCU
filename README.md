@@ -413,8 +413,8 @@ Lexical grammar:
 token 		:= keyword | identifier | number | punctuator
 
 keyword 	:= break | case | const | continue | default | do | else 
-				| enum | for | goto | if | inline | int8_t | int16_t | 
-				| likely | return | sizeof | switch | void | while
+				| for | goto | if | inline | int8_t | uint8_t | likely 
+				| return | sizeof | switch | unlikely | void | while
 
 identifier	:= nodigit 
 				| (identifier nodigit) 
@@ -423,23 +423,25 @@ nondigit	:= _ | a | ... | z | A | ... | Z
 digit		:= 0 | ... | 9
 
 constant	:= int-const | char-const
-int-const	:= dec-const | oct-const | hex-const
-dec-const	:= nz-digit | decimal-const digit
-octal-const	:= 0 | octal-const octal-digit
+int-const	:= dec-const int-suffix? 
+				| bin-const int-suffix? 
+				| hex-const int-suffix?
+dec-const	:= digit | decimal-const digit
+bin-const	:= bin-prefix bin-digit | bin-const bin-digit
+bin-prefix	:= 0b | 0B
 hex-const	:= hex-prefix hex-digit | hex-const hex-digit
 hex-prefix	:= 0x | 0X
-nz-digit	:= 1 | ... | 9
 oct-digit	:= 0 | ... | 7
+bin-digit	:= 0 | 1
 hex-digit	:= 0 | ... | 9 | A | ... | F | a | ... | f
-sign		:= + | -
-char-const	:= ' c-char-seq '
-c-char-seq	:= c-char | c-char-seq c-char
+int-suffix	:= u | U
+char-const	:= ' c-char '
 c-char		:= Any character except ' and \ | escape-seq
 escape-seq	:= \' | \" | \? | \\ | \a | \b | \f | \n | \r | \t | \v
 
 punctuator	:= Any of
 				[ ] ( ) { } ++ -- & * + - ~ ! / % << >> < > <= >= == !=
-				^ | && || ? : ; = *= /= %= += -= <<= >>= &= ^= |= ,
+				^ | && || ? : ; = *= /= %= += -= <<= >>= &= ^= |= <& <| ,
 ```````
 
 Phrase structure grammar (Only `|` and `?` must be escaped)
@@ -456,7 +458,7 @@ unary-expr		:= postfix-expr
 					| ++ unary-expr
 					| -- unary-expr
 					| unary-op unary-expr
-					| sizeof unary-expr
+					| sizeof unary-expr q22
 					| sizeof ( type-name )
 unary-op		:= & * + - ~ !
 cast-expr		:= unary-expr
@@ -493,7 +495,7 @@ cond-expr		:= lor-expr
 					| lor-expr \? expr : cond-expr
 assign-expr		:= cond-expr
 					| unary-expr assign-op assign-expr
-assign-op		:= = | *= | /= | %= | += | -= | <<= | >>= | &= | ^= | \|=
+assign-op		:= = | *= | /= | %= | += | -= | <<= | >>= | &= | ^= | \|= | <\| | <& 
 expr			:= assign-expr | expr , assign-expr
 const-expr		:= cond-expr
 
@@ -513,12 +515,10 @@ drct-declarator	:= identifier
 					| drct-declarator [ const-expr ]
 					| drct-declarator [ const? * ]
 					| drct-declarator ( param-list )
-					| drct-declarator ( identifier-list )
 pointer			:= * const? | * const? pointer
 param-list		:= param-decl | param-list param-decl
 param-decl		:= decl-spec declarator
 					| decl-spec abst-declarator
-identifier-list	:= identifier | identifier-list , identifier
 type-name		:= spec-qual-list abst-declarator?
 abst-declarator	:= pointer
 					| pointer? drct-abst-decl
@@ -543,13 +543,14 @@ block-item-list	:= block-item
 block-item		:= decl | stmt
 expr-stmt		:= expr? ;
 select-stmt		:= likelyhood-spec? if ( expr ) stmt
-					| likelyhood-spec? if ( expr ) stmt likelyhood-spec? else stmt
+					| likelyhood-spec? if ( expr ) stmt else stmt
 					| switch ( expr ) stmt
-iter-stmt		:= while ( expr ) stmt
-					| do stmt while ( expr ) ;
-					| for ( expr? ; expr? ; expr? ) stmt
-					| for ( decl expr? ; expr? ) stmt
+iter-stmt		:= likelyhood-spec? while ( expr ) stmt
+					| do stmt likelyhood-spec? while ( expr ) ;
+					| likelyhood-spec? for ( expr? ; expr? ; expr? ) stmt
+					| likelyhood-spec? for ( decl expr? ; expr? ) stmt
 jump-stmt		:= goto identifier ;
+					| goto identifier + expr ;
 					| continue ;
 					| break ;
 					| return expr? ;
