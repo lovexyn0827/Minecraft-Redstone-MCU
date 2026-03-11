@@ -5,11 +5,7 @@
 #include "array_list.h"
 #include "map.h"
 #include "ast.h"
-
-typedef struct {
-    str token;
-    uint_t line_num;
-} token_t;
+#include "tokenizer.h"
 
 typedef struct {
     const token_t *base;
