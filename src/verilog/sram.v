@@ -1,12 +1,13 @@
 module sram (
     input   wire    [7:0]   addr, 
     input   wire            clk, rst, wrt, 
-    inout   wire    [7:0]   dat
+    input   wire    [7:0]   dat_in,
+    output  wire    [7:0]   dat_out
 );
 
 reg [7:0] regs[255:0];
 
-assign dat = wrt ? 8'bZZZZZZZZ : regs[addr];
+assign dat_out = regs[addr];
 
 always @(posedge clk) begin
     if (rst) begin
@@ -14,7 +15,7 @@ always @(posedge clk) begin
             regs[i] <= 8'b0;
         end
     end else if (wrt) begin
-        regs[addr] <= dat;
+        regs[addr] <= dat_in;
     end
 end
 

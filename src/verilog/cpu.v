@@ -8,12 +8,14 @@ module cpu (
 
     output  wire    [7:0]   sram_addr, 
     output  wire            sram_wrt,  
-    inout   wire    [7:0]   sram_dat, 
+    input   wire    [7:0]   sram_dat_in, 
+    output  wire    [7:0]   sram_dat_out, 
 
     output  wire    [9:0]   csr_bus_addr , 
     output  wire            csr_bus_wrt,
     input   wire            csr_bus_intr,  
-    inout   wire    [7:0]   csr_bus_dat
+    input   wire    [7:0]   csr_bus_dat_in, 
+    output  wire    [7:0]   csr_bus_dat_out
 );
 
 // ================ IF stage ================
@@ -309,10 +311,10 @@ stack #( .WLEN(8), .DEPTH(32), .PTR_LEN(5) ) operand_stack (
 );
 
 assign sram_addr = alu_out_MEM;
-assign sram_dat = sram_wrt_MEM ? rf_rd2_MEM : 8'bZZZZZZZZ;
+assign sram_dat_out = rf_rd2_MEM;
 assign sram_wrt = sram_wrt_MEM;
 
-assign csr_bus_dat = csr_bus_wrt_MEM ? rf_rd1_MEM : 8'bZZZZZZZZ;
+assign csr_bus_dat_out = rf_rd1_MEM;
 assign csr_bus_addr = imm10_MEM;
 assign csr_bus_wrt = csr_bus_wrt_MEM;
 
@@ -336,10 +338,10 @@ always @(posedge clk) begin
     // Fresh: CSRDat, SRAMDat, OSOut
     alu_out_WB <= alu_out_MEM;
     sram2rf_WB <= sram2rf_MEM;
-    sram_dat_WB <= sram_dat;
+    sram_dat_WB <= sram_dat_in;
     operand_pop_WB <= operand_pop_MEM;
     operand_stack_out_WB <= operand_stack_out_MEM;
-    csr_bus_dat_WB <= csr_bus_dat;
+    csr_bus_dat_WB <= csr_bus_dat_in;
     csr2rf_WB <= csr2rf_MEM;
     rf_wrt_WB <= rf_wrt_MEM;
     rf_wi_WB <= rf_wi_MEM;

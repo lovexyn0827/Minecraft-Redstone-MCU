@@ -26,7 +26,7 @@ imem imem (
     .insn(insn)
 );
 
-wire [7:0] sram_addr, sram_dat;
+wire [7:0] sram_addr, sram_dat_mosi, sram_dat_miso;
 wire sram_wrt;
 
 sram sram (
@@ -34,19 +34,21 @@ sram sram (
     .rst(rst), 
     .wrt(sram_wrt), 
     .addr(sram_addr), 
-    .dat(sram_dat)
+    .dat_in(sram_dat_mosi), 
+    .dat_out(sram_dat_miso)
 );
 
 wire [9:0] csr_addr;
 wire csr_wrt;
-wire [7:0] csr_dat;
+wire [7:0] csr_dat_mosi, csr_dat_miso;
 
 gpio gpio (
     .clk(clk), 
     .rst(rst), 
     .csr_addr(csr_addr), 
     .csr_wrt(csr_wrt), 
-    .csr_dat(csr_dat), 
+    .csr_dat_in(csr_dat_mosi), 
+    .csr_dat_out(csr_dat_miso), 
     .gpin(gpin), 
     .gpout(gpout)
 );
@@ -58,10 +60,12 @@ cpu cpu (
     .insn(insn), 
     .sram_addr(sram_addr), 
     .sram_wrt(sram_wrt), 
-    .sram_dat(sram_dat), 
+    .sram_dat_in(sram_dat_miso), 
+    .sram_dat_out(sram_dat_mosi), 
     .csr_bus_addr(csr_addr), 
     .csr_bus_wrt(csr_wrt), 
-    .csr_bus_dat(csr_dat), 
+    .csr_bus_dat_in(csr_dat_miso), 
+    .csr_bus_dat_out(csr_dat_mosi),
     .csr_bus_intr(1'b0)
 );
 
