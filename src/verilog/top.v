@@ -53,6 +53,15 @@ gpio gpio (
     .gpout(gpout)
 );
 
+rs_ecc rs_ecc (
+    .clk(clk), 
+    .rst(rst), 
+    .csr_addr(csr_addr), 
+    .csr_wrt(csr_wrt), 
+    .csr_dat_in(csr_dat_mosi), 
+    .csr_dat_out(csr_dat_miso)
+);
+
 cpu cpu (
     .clk(clk), 
     .rst(rst), 
