@@ -96,15 +96,19 @@ class StackTable extends JTable {
 			case 1:
 				if (this.callStack.debugGetPointer() == row) {
 					return String.format("-> 0x%03x", this.callStack.debugGet(row));
-				} else {
+				} else if (row < this.callStack.getCapacity()) {
 					return String.format("0x%03x", this.callStack.debugGet(row));
+				} else {
+					return "";
 				}
 			case 2:
 
 				if (this.operandStack.debugGetPointer() == row) {
 					return String.format("-> 0x%02x", this.operandStack.debugGet(row));
-				} else {
+				} else if (row < this.operandStack.getCapacity()) {
 					return String.format("0x%02x", this.operandStack.debugGet(row));
+				} else {
+					return "";
 				}
 			default:
 				throw new AssertionError();

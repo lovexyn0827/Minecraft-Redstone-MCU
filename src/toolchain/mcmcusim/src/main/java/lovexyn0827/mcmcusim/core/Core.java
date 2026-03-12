@@ -23,8 +23,8 @@ public final class Core {
 		this.regFile = new RegFile();
 		this.insnMemory = new InstructionMemory();
 		this.dataMemory = new DataMemory();
-		this.callStack = new Stack(16, 12);
-		this.operandStack = new Stack(32, 8);
+		this.callStack = new Stack(12, 8);
+		this.operandStack = new Stack(8, 32);
 		this.periphals = new Int2ObjectOpenHashMap<>();
 		this.periphals.defaultReturnValue(Periphal.DUMMY);
 		this.registerPeriphal(new GPIO());
