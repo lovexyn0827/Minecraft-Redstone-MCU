@@ -230,7 +230,10 @@ public class MainFrame extends JFrame {
 			@Override
 			public void run() {
 				if (MainFrame.this.running) {
-					MainFrame.this.tick();
+					int loopCount = MainFrame.this.superHot ? 1000 * MainFrame.this.tickPeriod : 1;
+					for (int i = 0; i < loopCount; i++) {
+						MainFrame.this.tick();
+					}
 				} else {
 					this.cancel();
 				}

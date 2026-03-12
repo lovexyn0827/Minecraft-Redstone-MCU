@@ -38,7 +38,7 @@ public final class Core {
 		this.shouldIncreasementPC = true;
 		insn.execute(this);
 		if (this.shouldIncreasementPC) {
-			this.pc++;
+			this.pc = (pc + 1) & 0xFFF;
 		}
 
 		for (Periphal periphal : this.periphals.values()) {
@@ -88,7 +88,7 @@ public final class Core {
 	public void jumpTo(int target) {
 		assert (target & (-1 << 12)) == 0;
 		this.shouldIncreasementPC = false;
-		this.pc = target;
+		this.pc = target & 0xFFF;
 	}
 	
 	public void registerPeriphal(Periphal periphal) {
