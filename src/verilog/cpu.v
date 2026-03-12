@@ -63,7 +63,10 @@ wire insert_bubble;
 assign insert_bubble = next_pc_from_EX_eff 
         | (sram2rf_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)))
         | (csr2rf_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)))
-        | (operand_pop_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)));
+        | (operand_pop_EX & ((rf_ri1_ID == rf_wi_EX) | (rf_ri2_ID == rf_wi_EX)))
+        | (sram2rf_MEM & ((rf_ri1_ID == rf_wi_MEM) | (rf_ri2_ID == rf_wi_MEM)))
+        | (csr2rf_MEM & ((rf_ri1_ID == rf_wi_MEM) | (rf_ri2_ID == rf_wi_MEM)))
+        | (operand_pop_MEM & ((rf_ri1_ID == rf_wi_MEM) | (rf_ri2_ID == rf_wi_MEM)));
 
 wire call_push_ID, call_pop_ID;
 wire bxxz_ID;
