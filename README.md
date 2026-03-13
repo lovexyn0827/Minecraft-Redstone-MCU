@@ -451,9 +451,10 @@ Phrase structure grammar (Only `|` and `?` must be escaped)
 primary-expr	:= identifier | constant | ( expr )
 postfix-expr	:= primary-expr 
                     | postfix-expr [ expr ]
-                    | postfix-expr ( expr )
+                    | postfix-expr ( arg-expr-list? )
                     | postfix-expr ++
                     | postfix-expr --
+arg-expr-list	:= assign-expr | arg-expr-list assign-expr
 unary-expr		:= postfix-expr
 					| ++ unary-expr
 					| -- unary-expr
@@ -492,7 +493,7 @@ land-expr		:= or-expr
 lor-expr		:= land-expr
 					| lor-expr \|\| land-expr
 cond-expr		:= lor-expr
-					| lor-expr \? expr : cond-expr
+					| lor-expr likelyhood-spec? \? expr : cond-expr
 assign-expr		:= cond-expr
 					| unary-expr assign-op assign-expr
 assign-op		:= = | *= | /= | %= | += | -= | <<= | >>= | &= | ^= | \|= | <\| | <& 
@@ -561,6 +562,46 @@ extern-decl		:= func-def | decl
 func-def		:= decl-spec declarator decl-list? comp-stmt
 decl-list		:= decl | decl-list decl
 ``````
+
+`````
+AST_ROOT = 0x00000,
+    AST_TYPENAME = 0x01000,
+    AST_TYPE_SCALAR,
+    AST_TYPE_FUNCT,
+    AST_STMT = 0x02000,
+    AST_STMT_DECL,
+    AST_STMT_EXPR,
+    AST_STMT_IF,
+    AST_STMT_IFELSE,
+    AST_STMT_FOR,
+    AST_STMT_FORDECL,
+    AST_STMT_WHILE,
+    AST_STMT_DO,
+    AST_STMT_SWITCH,
+    AST_STMT_GOTO,
+    AST_STMT_BREAK,
+    AST_STMT_CONTINUE,
+    AST_STMT_RETURN,
+    AST_STMT_COMPOUND,
+    AST_STMT_CASE,
+    AST_STMT_DEFAULT,
+    AST_STMT_LABELED,
+    AST_DECL = 0x04000,
+    AST_DECL_DRCT_FN,
+    AST_DECL_DRCT_VAR,
+    AST_EXPR = 0x08000,
+    AST_EXPR_CALL,
+    AST_EXPR_SYMBOL,
+    AST_EXPR_CONST,
+    AST_EXPR_UNARY,
+    AST_EXPR_CAST,
+    AST_EXPR_BINARY,
+    AST_EXPR_COND,
+    AST_EXPR_ASSIGN, 
+    AST_FUNC_IMPL = 0x02000
+`````
+
+
 
 ## Example Programs
 
