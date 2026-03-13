@@ -682,3 +682,7 @@ GF256_MUL_END:
 ### Data Matrix Generator
 
 ## Note
+
+> It always matters whether you are opening your text editor or turn to a random LLM when you're about writing something. 
+>
+> Yeah, it always matters, even it is 2026 when chatbots are being transformed from toys to (basically) acceptable assistants.
