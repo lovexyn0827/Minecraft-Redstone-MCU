@@ -8,7 +8,7 @@
 #include "tokenizer.h"
 
 typedef struct {
-    const token_t *base;
+    const token_t **base;
     uint_t cur_pos;
     uint_t end_pos;
 } read_head_t;
@@ -29,7 +29,7 @@ typedef struct symbol_t {
 } symbol_t;
 
 typedef struct {
-    read_head_t ptr;
+    read_head_t *ptr;
     ast_node_t *cur_scope;
     ast_t ast;
 } context_t;

@@ -7,7 +7,7 @@
 #include "array_list.h"
 
 typedef enum {
-    TOKEN_KW_BREAK = 0x00,
+    TOKEN_KW_BREAK = 0x0100,
     TOKEN_KW_CASE,
     TOKEN_KW_CONST,
     TOKEN_KW_CONTINUE,
@@ -27,12 +27,12 @@ typedef enum {
     TOKEN_KW_SWITCH,
     TOKEN_KW_VOID,
     TOKEN_KW_WHILE,
-    TOKEN_IDENTIFIER = 0x20,
-    TOKEN_CONST_DEC = 0x30,
+    TOKEN_IDENTIFIER = 0x0200,
+    TOKEN_CONST_DEC = 0x0400,
     TOKEN_CONST_BIN,
     TOKEN_CONST_HEX,
     TOKEN_CONST_CHAR,
-    TOKEN_PUNCT_L_SP = 0x80,
+    TOKEN_PUNCT_L_SP = 0x0800,
     TOKEN_PUNCT_R_SP,
     TOKEN_PUNCT_L_P,
     TOKEN_PUNCT_R_P,
@@ -76,7 +76,7 @@ typedef enum {
     TOKEN_PUNCT_XOREQ,
     TOKEN_PUNCT_COMMA,
     TOKEN_PUNCT_COMMENT,
-    TOKEN_ERROR = 0xFF
+    TOKEN_ERROR = 0x0000
 } token_type_t;
 
 typedef struct {

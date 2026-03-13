@@ -63,7 +63,7 @@
 
 #define HASH_MAP_GET(M, Kval, Vval, K, V, CMP) {\
     K __key_backup_map = Kval;\
-    uint_t slot_no = (M).hash(__key_backup_map) % M.size;\
+    uint_t slot_no = (M).hash(__key_backup_map) % (M).size;\
     typeof((M).slots[slot_no]) node = (M).slots[slot_no];\
     while (node != NULL) {\
         if (CMP(node->key, __key_backup_map)) {\
@@ -72,7 +72,7 @@
         }\
         node = (typeof(node)) (node->next);\
     }\
-    if (node == NULL) Vval = M.nil;\
+    if (node == NULL) Vval = (M).nil;\
 }
 
 #define HASH_MAP_FREE(M) {\

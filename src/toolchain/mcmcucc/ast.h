@@ -5,6 +5,8 @@
 
 typedef struct symbol_t symbol_t;
 
+typedef HASH_MAP_TYPE(str, symbol_t*) symbol_tbl_t;
+
 typedef enum ast_node_type {
     AST_ROOT = 0x00000,
     AST_TYPENAME = 0x01000,
@@ -45,9 +47,7 @@ typedef enum ast_node_type {
 
 #define AST_NODE_SHARED_FIELDS \
     ast_node_type_t node_type;\
-    struct ast_node *parent;\
-    HASH_MAP_TYPE(str, symbol_t*) symbol_tbl;\
-    ARRAY_LIST_TYPE(struct ast_node_t *) children;
+    const struct ast_node *parent;
 
 typedef struct ast_node {
     AST_NODE_SHARED_FIELDS
@@ -105,7 +105,7 @@ typedef struct ast_expr_symbol {
 
 typedef struct ast_expr_constant {
     AST_EXPR_NODE_SHARED_FIELDS
-    const uint32_t value;
+    uint32_t value;
 } ast_expr_constant_t;
 
 typedef enum unary_op {
@@ -241,6 +241,7 @@ typedef struct ast_stmt_compound {
     ARRAY_LIST_TYPE(const ast_stmt_t *) statements;
     const uint_t entry_address;
     const uint_t end_address;
+    symbol_tbl_t symbol_tbl;\
 } ast_stmt_compound_t;
 
 typedef struct ast_stmt_if {
@@ -346,11 +347,16 @@ typedef struct ast_stmt_labeled {
 typedef struct ast_function_impl {
     AST_NODE_SHARED_FIELDS
     const ast_decl_direct_function_t *decl;
-    const ast_stmt_compound *body;
+    const ast_stmt_compound_t *body;
     uint_t address;
-}
+} ast_function_impl_t;
 
 // *********** AST ***********
+
+typedef struct ast_root {
+    AST_NODE_SHARED_FIELDS
+    symbol_tbl_t symbol_tbl;
+} ast_root_t;
 
 typedef struct {
     ast_node_t root;
