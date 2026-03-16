@@ -11,6 +11,7 @@ typedef enum ast_node_type {
     AST_ROOT = 0x00000,
     AST_TYPENAME = 0x01000,
     AST_TYPE_SCALAR,
+    AST_TYPE_PTR,
     AST_TYPE_FUNCT,
     AST_STMT = 0x02000,
     AST_STMT_DECL,
@@ -33,6 +34,7 @@ typedef enum ast_node_type {
     AST_DECL = 0x04000,
     AST_DECL_DRCT_FN,
     AST_DECL_DRCT_VAR,
+    AST_DECL_DRCT_ARRAY,
     AST_EXPR = 0x08000,
     AST_EXPR_CALL,
     AST_EXPR_SYMBOL,
@@ -58,7 +60,8 @@ typedef struct ast_node {
 // *********** Type Names  ***********
 
 #define AST_TYPENAME_NODE_SHARED_FIELDS \
-    AST_NODE_SHARED_FIELDS
+    AST_NODE_SHARED_FIELDS\
+    bool immutable;
 
 typedef struct ast_typename {
     AST_TYPENAME_NODE_SHARED_FIELDS
@@ -66,16 +69,18 @@ typedef struct ast_typename {
 
 typedef enum elementary_type {
     ETYPE_INT_8 = TOKEN_KW_INT8_T,
-    ETYPE_UINT_8 = TOKEN_KW_UINT8_T,
-    ETYPE_POINTER
+    ETYPE_UINT_8 = TOKEN_KW_UINT8_T
 } elementary_type_t;
 
-typedef struct ast_typename_scalar {
+typedef struct ast_typename_prim {
     AST_TYPENAME_NODE_SHARED_FIELDS
     elementary_type_t type_name;
-    const struct ast_typename_scalar *underlying_type;
-    bool immutable;
-} ast_typename_scalar_t;
+} ast_typename_prim_t;
+
+typedef struct ast_typename_ptr {
+    AST_TYPENAME_NODE_SHARED_FIELDS
+    const ast_typename_prim_t *underlying_type;
+} ast_typename_ptr_t;
 
 typedef struct ast_typename_funct {
     AST_TYPENAME_NODE_SHARED_FIELDS
@@ -233,6 +238,11 @@ typedef struct ast_decl_direct_variable {
     const ast_expr_t *initializer;
     bool register_var;
 } ast_decl_direct_variable_t;
+
+typedef struct ast_decl_array {
+    AST_DECL_SHARED_FIELDS
+    const ast_expr_t *array_length;
+} ast_decl_array_t;
 
 // *********** Statements ***********
 
