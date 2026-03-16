@@ -174,6 +174,8 @@ void init_punctuator_token_type_map() {
     HASH_MAP_PUT(PUNCTUATOR_TOKEN_TYPES, "&=", TOKEN_PUNCT_ANDEQ, str, token_type_t, str_equal)
     HASH_MAP_PUT(PUNCTUATOR_TOKEN_TYPES, "^=", TOKEN_PUNCT_XOR, str, token_type_t, str_equal)
     HASH_MAP_PUT(PUNCTUATOR_TOKEN_TYPES, "|=", TOKEN_PUNCT_OREQ, str, token_type_t, str_equal)
+    HASH_MAP_PUT(PUNCTUATOR_TOKEN_TYPES, "<|", TOKEN_PUNCT_SET, str, token_type_t, str_equal)
+    HASH_MAP_PUT(PUNCTUATOR_TOKEN_TYPES, "<&", TOKEN_PUNCT_CLR, str, token_type_t, str_equal)
     HASH_MAP_PUT(PUNCTUATOR_TOKEN_TYPES, ",", TOKEN_PUNCT_COMMA, str, token_type_t, str_equal)
     HASH_MAP_PUT(PUNCTUATOR_TOKEN_TYPES, "//", TOKEN_PUNCT_COMMENT, str, token_type_t, str_equal)
 }

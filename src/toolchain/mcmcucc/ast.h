@@ -42,6 +42,8 @@ typedef enum ast_node_type {
     AST_EXPR_BINARY,
     AST_EXPR_COND,
     AST_EXPR_ASSIGN,
+    AST_EXPR_TYPESZ,
+    AST_EXPR_EXPRSZ,
     AST_FUNC_IMPL = 0x10000,
 } ast_node_type_t;
 
@@ -92,11 +94,13 @@ typedef struct ast_expr {
     AST_EXPR_NODE_SHARED_FIELDS
 } ast_expr_t;
 
+typedef ARRAY_LIST_TYPE(const ast_expr_t*) arg_list_t;
+
 typedef struct ast_expr_call {
     AST_EXPR_NODE_SHARED_FIELDS
     const ast_expr_t *function_addr;
-    ARRAY_LIST_TYPE(const ast_expr_t*) arguments;
-} ast_expr_call;
+    arg_list_t arguments;
+} ast_expr_call_t;
 
 typedef struct ast_expr_symbol {
     AST_EXPR_NODE_SHARED_FIELDS
@@ -107,6 +111,16 @@ typedef struct ast_expr_constant {
     AST_EXPR_NODE_SHARED_FIELDS
     uint32_t value;
 } ast_expr_constant_t;
+
+typedef struct ast_expr_sizeof_expr {
+    AST_EXPR_NODE_SHARED_FIELDS
+    const ast_expr_t *sizeof_expr;
+} ast_expr_sizeof_expr_t;
+
+typedef struct ast_expr_sizeof {
+    AST_EXPR_NODE_SHARED_FIELDS
+    const ast_typename_t *sizeof_type;
+} ast_expr_sizeof_type_t;
 
 typedef enum unary_op {
     UOP_INCGET,
@@ -129,7 +143,7 @@ typedef struct ast_expr_unary {
 
 typedef struct ast_expr_cast {
     AST_EXPR_NODE_SHARED_FIELDS
-    const ast_typename_t op;
+    const ast_typename_t cast_to;
     const ast_expr_t *opnd;
 } ast_expr_cast_t;
 
@@ -151,7 +165,10 @@ typedef enum binary_op {
     BOP_XOR,
     BOP_OR,
     BOP_LAND,
-    BOP_LOR
+    BOP_LOR,
+    BOP_SUBSCR,
+    BOP_COMMA,
+    BOP_UNRECOGNIZED
 } binary_op_t;
 
 typedef struct ast_expr_binary {
@@ -188,8 +205,8 @@ typedef enum assign_op {
 typedef struct ast_expr_assign {
     AST_EXPR_NODE_SHARED_FIELDS
     assign_op_t op;
-    const ast_expr_t *left_opnd;
-    const ast_expr_t *right_opnd;
+    const ast_expr_t *dest;
+    const ast_expr_t *src;
 } ast_expr_assign_t;
 
 // *********** Declarations ***********
