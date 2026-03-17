@@ -507,17 +507,15 @@ decl-spec		:= storage-cl-spec decl-spec?
 					| const decl-spec?
 					| inline decl-spec?
 init-decl-list	:= init-decl | init-decl-list, init-decl
-init-decl		:= declarator | declarator = initializer
+init-decl		:= declarator | declarator = assign-expr
 storage-cl-spec	:= auto | register
 type-spec		:= void | int8_t | uint8_t
 declarator		:= pointer? drct-declarator
 drct-declarator	:= identifier
 					| ( declarator )
-					| drct-declarator [ const-expr ]
-					| drct-declarator [ const? * ]
-					| drct-declarator ( param-list )
+					| drct-declarator ( param-list? )
 pointer			:= * const? | * const? pointer
-param-list		:= param-decl | param-list param-decl
+param-list		:= param-decl | param-list , param-decl
 param-decl		:= decl-spec declarator
 					| decl-spec abst-declarator
 type-name		:= const? type-spec abst-declarator?
@@ -525,7 +523,6 @@ abst-declarator	:= pointer
 					| pointer? drct-abst-decl
 drct-abst-decl	:= ( abst-declarator )
 					| drct-abst-decl? ( param-list? )
-initializer		:= assign-expr
 
 // ****** Statements ******
 stmt			:= labeled-stmt
