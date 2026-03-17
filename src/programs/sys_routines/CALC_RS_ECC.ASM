@@ -11,63 +11,9 @@
 	DB		DATBUF	N
 	DB		ECCBUF	K
 
-start:
-	ADD		r1	r0	r0
-	ADDI	r2	r0	16
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	32
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	12
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	86
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	97
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	128
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	236
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	17
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	236
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	17
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	236
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	17
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	236
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	17
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	236
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	ADDI	r2	r0	17
-	ISTORE	r2	r1(DATBUF)
-	ADDI	r1	r1	1
-	INVOKE	calc_rs_ecc
-halt:
-	JMP		halt
-
 calc_rs_ecc:
-	% Takes (8 * N + 7 * K + 10) CP
-	% Size: 24 Insns (480 bits) - cheaper that soft impl.
+	% Takes (8 * (N + K) + 10) CP
+	% Size: 27 Insns (480 bits) - cheaper that soft impl.
 	PUSH	r1
 	PUSH	r2
 	PUSH	r3
@@ -77,7 +23,7 @@ calc_rs_ecc:
 	ADDI	r1	r0	1
 	ILOAD	r3	r0(DATBUF)
 	% Stall
-	ADDI	r2	r0	1
+	ADDI	r2	r0	1	% Exploiting the stall
 	OUTCSR	r3	CSR_RSDAT
 	OUTCSR	r2	CSR_RSDATRDY
 loop_calc_rs_ecc:
@@ -85,7 +31,7 @@ loop_calc_rs_ecc:
 	% Otherwise we'll leave RSECC or CPU idle
 	ILOAD	r3	r1(DATBUF)
 	ADDI	r1	r1	1	% Exploiting the stall
-	ADDI	r2	r1	-N
+	ADDI	r2	r1	-N	% Exploiting the stall
 	OUTCSR	r3	CSR_RSDAT
 	ADD		r0	r0	r0
 	BNEZ	r2	loop_calc_rs_ecc
@@ -96,7 +42,8 @@ loop_calc_rs_ecc:
 loop_read_rs_ecc:
 	OUTCSR	r1	CSR_RSADDR
 	INCSR	r2	CSR_RSECC
-	ADDI	r1	r1	-1	% Exploit the stall 
+	ADDI	r1	r1	-1	% Exploit the stall
+	% Stall
 	ISTORE	r2	r1(ECCBUF)
 	BGEZ	r1	loop_read_rs_ecc
 	% Stall before BNEZ branches
