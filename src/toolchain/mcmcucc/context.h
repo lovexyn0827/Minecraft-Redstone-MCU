@@ -11,6 +11,7 @@ typedef struct {
     const token_t **base;
     uint_t cur_pos;
     uint_t end_pos;
+    ARRAY_LIST_TYPE(uint_t) marks;
 } read_head_t;
 
 typedef enum {

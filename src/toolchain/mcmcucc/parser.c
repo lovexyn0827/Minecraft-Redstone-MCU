@@ -75,19 +75,27 @@ void unread_prev(read_head_t *ptr) {
 }
 
 void skip_current(read_head_t *ptr) {
-    // printf(peek_current(ptr));
     debug("Skipping token %s\n", peek_current(ptr)->token);
     if (inbounds(ptr)) (ptr->cur_pos)++;
 }
 
 void verify_and_skip_current(read_head_t *ptr, token_type_t type) {
-    // printf(peek_current(ptr));
     if (peek_current(ptr)->type != type) {
         error_on_token(peek_current(ptr), "Expected token %d but got %d!\n", type, peek_current(ptr)->type);
         return;
     }
 
     skip_current(ptr);
+}
+
+void mark_current(read_head_t *ptr) {
+    ARRAY_LIST_APPEND(ptr->marks, ptr->cur_pos, uint_t)
+}
+
+void return_marked(read_head_t *ptr) {
+    uint_t pos;
+    ARRAY_LIST_GET_TAIL(ptr->marks, pos)
+    ptr->cur_pos = pos;
 }
 
 // *********** Expressions ***********
@@ -317,7 +325,7 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 // 					| sizeof ( type-name )
 // unary-op		:= & * + - ~ !
 
-bool parse_typename(context_t *ctx, ast_node_t *parent, ast_expr_t **dest);
+bool parse_typename(context_t *ctx, ast_node_t *parent, ast_typename_t **dest);
 
 bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     debug(" ==> Parsing: unary-expr\n");
@@ -765,7 +773,9 @@ bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     assign_node->dest = assign_dest;
     parse_assign_expr(ctx, (ast_node_t*) assign_node, (ast_expr_t**) &(assign_node->src));
     assign_node->lvalue = assign_node->src->lvalue;    // XXX
-
+    if (!assign_dest->lvalue) {
+        error_on_token(assign_op_token, "Destnation must be lvalue!\n");
+    }
     return true;
 }
 
@@ -780,16 +790,184 @@ bool parse_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     return parse_binary_expr(ctx, parent, dest, comma_op_token_to_op, parse_assign_expr);
 }
 
-// *********** Type Names ***********
+// *********** Declarations ***********
 
-bool parse_typename(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
-    // Dummy
-    if (peek_current(ctx->ptr)->type == TOKEN_KW_UINT8_T) {
-        skip_current(ctx->ptr);
-        return true;
-    } else {
+// pointer			:= * const? | * const? pointer
+
+// Use with caution on memory leakage
+void clone_typename_node(ast_typename_t **node) {
+    size_t size;
+    switch ((*node)->node_type) {
+    case AST_TYPE_FUNCT:
+        size = sizeof(ast_typename_funct_t);
+        break;
+    case AST_TYPE_PTR:
+        size = sizeof(ast_typename_ptr_t);
+        break;
+    case AST_TYPE_PRIM:
+        size = sizeof(ast_typename_prim_t);
+        break;
+    default:
+        fatal("We're not supposed to be there anyway.");
+    }
+
+    void* dest = malloc(size);
+    memcpy(dest, *node, size);
+    *node = (ast_typename_t*) dest;
+}
+
+// Yeah, it has a weird signature.
+// We're using an iterative algortihm for better clearity.
+bool parse_pointer_decl(context_t *ctx, ast_node_t *parent, ast_typename_t *referred_type, ast_typename_ptr_t **dest) {
+    debug(" ==> Parsing: pointer\n");
+    if (peek_current(ctx->ptr)->type != TOKEN_PUNCT_STAR) {
         return false;
     }
+
+    clone_typename_node(&referred_type);
+    ast_typename_ptr_t *ptr_node;
+    while (peek_current(ctx->ptr)->type != TOKEN_PUNCT_STAR) {
+        skip_current(ctx->ptr);
+        ptr_node = (ast_typename_ptr_t*) malloc(sizeof(ast_typename_ptr_t));
+        ptr_node->node_type = AST_TYPE_PTR;
+        ptr_node->parent = parent;
+        ptr_node->underlying_type = referred_type;
+        referred_type->parent = (ast_node_t*) ptr_node;
+        if (peek_current(ctx->ptr)->type == TOKEN_KW_CONST) {
+            ptr_node->immutable = true;
+            skip_current(ctx->ptr);
+        } else {
+            ptr_node->immutable = false;
+        }
+
+        referred_type = (ast_typename_t*) ptr_node;
+    }
+
+    *dest = ptr_node;
+    return true;
+}
+
+void check_for_duplicated_type_spec(context_t *ctx, uint_t flags) {
+    if ((flags & (DECL_SPEC_INT8_T | DECL_SPEC_UINT8_T | DECL_SPEC_VOID)) != 0) {
+        error_on_token(peek_current(ctx->ptr), "Duplicated type-specifier!\n");
+    }
+}
+
+bool parse_decl_specifier(context_t *ctx, ast_node_t *parent, ast_typename_t *underlying_type, uint_t *dest) {
+    debug(" ==> Parsing: decl-spec\n");
+    uint_t flags = 0;
+    while (true) {
+        switch (peek_current(ctx->ptr)->type) {
+        case TOKEN_KW_REGISTER:
+            skip_current(ctx->ptr);
+            flags |= DECL_SPEC_REGISTER;
+            break;
+        case TOKEN_KW_CONST:
+            skip_current(ctx->ptr);
+            flags |= DECL_SPEC_CONST;
+            break;
+        case TOKEN_KW_INLINE:
+            skip_current(ctx->ptr);
+            flags |= DECL_SPEC_INLINE;
+            break;
+        case TOKEN_KW_UINT8_T:
+            skip_current(ctx->ptr);
+            check_for_duplicated_type_spec(ctx, flags);
+            flags |= DECL_SPEC_UINT8_T;
+            break;
+        case TOKEN_KW_INT8_T:
+            skip_current(ctx->ptr);
+            check_for_duplicated_type_spec(ctx, flags);
+            flags |= DECL_SPEC_INT8_T;
+            break;
+        case TOKEN_KW_VOID:
+            skip_current(ctx->ptr);
+            check_for_duplicated_type_spec(ctx, flags);
+            flags |= DECL_SPEC_VOID;
+            break;
+        default:
+            if (flags == 0) return false;
+            *dest = flags;
+            return true;
+        }
+    }
+}
+
+// drct-abst-decl	:= ( abst-declarator )
+// 					| drct-abst-decl? ( param-list? )
+
+bool parse_abstract_declarator(context_t *ctx, uint_t spec, ast_node_t *parent, ast_typename_t **dest);
+bool parse_param_list(context_t *ctx, ast_node_t *parent, param_list_t *dest);
+
+bool parse_drct_abst_declarator(context_t *ctx, uint_t spec, ast_node_t *parent, ast_typename_t **dest) {
+    // Again, we've run into the same problem as the one in parse_cast_expr();
+    // We have to avoid indefinite recursion and misdispatches.
+    // Fortunately abst-declarator recurses to here
+    if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
+        mark_current(ctx->ptr);
+        skip_current(ctx->ptr);
+        if (!parse_abstract_declarator(ctx, spec, (ast_node_t*) parent, (ast_typename_t**) dest)) {
+            return_marked(ctx->ptr);
+            return false;
+        }
+
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+        return true;
+    } else {
+        ast_typename_funct_t *func_type = (ast_typename_funct_t*) malloc(sizeof(ast_typename_funct_t));
+        func_type->node_type = AST_TYPE_FUNCT;
+        func_type->parent = parent;
+        mark_current(ctx->ptr);
+        if (!parse_abstract_declarator(ctx, spec, (ast_node_t*) func_type,
+                (ast_typename_t**) &(func_type->return_type))) {
+            return_marked(ctx->ptr);
+            free(func_type);
+            return false;
+        }
+
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
+             parse_param_list(ctx, (ast_node_t*) func_type, &(func_type->param_type));
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+        return true;
+    }
+}
+
+// abst-declarator	:= pointer
+// 					| pointer? drct-abst-decl
+
+// Let A, B, P denote abst-decl, drct-abst-decl, pointer respectively
+// Since A := P | P? B and B := (A) | B(Q), we have A := P | P? (A) (Q?)*
+// And considering sematic constains, we have A := P | P? ( A ) | P? ( A ) ( Q? )
+// Which means the resulting syntax tree is "linear" and the deepest node is well defined
+// Thus, we can omit intermediate B and treat branchings as transformations for better clearity
+
+void type_spec_to_ast_typename_node(uint_t spec, ast_node_t *parent, ast_typename_t **dest) {
+    ast_typename_prim_t *new_node = (ast_typename_prim_t*) malloc(sizeof(ast_typename_prim_t));
+    new_node->node_type = AST_TYPE_PRIM;
+    new_node->parent = parent;
+    new_node->immutable = (spec & DECL_SPEC_CONST) != 0;
+    if (spec & DECL_SPEC_INT8_T) {
+        new_node->type_name = ETYPE_INT_8;
+    } else if (spec & DECL_SPEC_UINT8_T) {
+        new_node->type_name = ETYPE_UINT_8;
+    } else if (spec & DECL_SPEC_VOID) {
+        new_node->type_name = ETYPE_VOID;
+    }
+}
+
+bool parse_abstract_declarator(context_t *ctx, uint_t spec, ast_node_t *parent, ast_typename_t **dest) {
+    ast_typename_t *declaration_type, *declarator_type;
+    type_spec_to_ast_typename_node(spec, NULL, &declaration_type);
+    return false;
+}
+
+int *(****(**f)(void))(void);
+
+bool parse_typename(context_t *ctx, ast_node_t *parent, ast_typename_t **dest) {
+    debug(" ==> Parsing: type-name\n");
+    // TODO
+    int k = (*f)();
+    return k == 0;
 }
 
 // *********** Main Procedure ***********

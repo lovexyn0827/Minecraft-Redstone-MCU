@@ -11,7 +11,7 @@ typedef HASH_MAP_TYPE(str, symbol_t*) symbol_tbl_t;
 typedef enum ast_node_type {
     AST_ROOT = 0x00000,
     AST_TYPENAME = 0x01000,
-    AST_TYPE_SCALAR,
+    AST_TYPE_PRIM,
     AST_TYPE_PTR,
     AST_TYPE_FUNCT,
     AST_STMT = 0x02000,
@@ -70,7 +70,8 @@ typedef struct ast_typename {
 
 typedef enum elementary_type {
     ETYPE_INT_8 = TOKEN_KW_INT8_T,
-    ETYPE_UINT_8 = TOKEN_KW_UINT8_T
+    ETYPE_UINT_8 = TOKEN_KW_UINT8_T,
+    ETYPE_VOID = TOKEN_KW_VOID
 } elementary_type_t;
 
 typedef struct ast_typename_prim {
@@ -80,13 +81,15 @@ typedef struct ast_typename_prim {
 
 typedef struct ast_typename_ptr {
     AST_TYPENAME_NODE_SHARED_FIELDS
-    const ast_typename_prim_t *underlying_type;
+    const ast_typename_t *underlying_type;
 } ast_typename_ptr_t;
+
+typedef ARRAY_LIST_TYPE(const ast_typename_t *) param_list_t;
 
 typedef struct ast_typename_funct {
     AST_TYPENAME_NODE_SHARED_FIELDS
     const ast_typename_t *return_type;
-    ARRAY_LIST_TYPE(const ast_typename_t *) param_type;
+    param_list_t param_type;
 } ast_typename_funct_t;
 
 // *********** Expressions ***********
@@ -223,6 +226,15 @@ typedef struct ast_expr_assign {
 typedef struct ast_decl {
     AST_DECL_SHARED_FIELDS
 } ast_decl_t;
+
+typedef enum decl_specifier {
+    DECL_SPEC_CONST = 0x01,
+    DECL_SPEC_REGISTER = 0x02,
+    DECL_SPEC_INLINE = 0x04,
+    DECL_SPEC_VOID = 0x08,
+    DECL_SPEC_INT8_T = 0x10,
+    DECL_SPEC_UINT8_T = 0x20
+} decl_specifier_t;
 
 typedef struct ast_decl_direct_function {
     AST_DECL_SHARED_FIELDS

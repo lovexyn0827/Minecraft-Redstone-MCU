@@ -95,6 +95,7 @@ void init_keyword_token_type_map() {
     HASH_MAP_PUT(KEYWORD_TOKEN_TYPES, "int8_t", TOKEN_KW_INT8_T, str, token_type_t, str_equal);
     HASH_MAP_PUT(KEYWORD_TOKEN_TYPES, "uint8_t", TOKEN_KW_UINT8_T, str, token_type_t, str_equal);
     HASH_MAP_PUT(KEYWORD_TOKEN_TYPES, "likely", TOKEN_KW_LIKELY, str, token_type_t, str_equal);
+    HASH_MAP_PUT(KEYWORD_TOKEN_TYPES, "register", TOKEN_KW_REGISTER, str, token_type_t, str_equal);
     HASH_MAP_PUT(KEYWORD_TOKEN_TYPES, "return", TOKEN_KW_RETURN, str, token_type_t, str_equal);
     HASH_MAP_PUT(KEYWORD_TOKEN_TYPES, "sizeof", TOKEN_KW_SIZEOF, str, token_type_t, str_equal);
     HASH_MAP_PUT(KEYWORD_TOKEN_TYPES, "switch", TOKEN_KW_SWITCH, str, token_type_t, str_equal);

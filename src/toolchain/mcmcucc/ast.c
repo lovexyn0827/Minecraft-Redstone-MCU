@@ -12,7 +12,7 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         break;
     case AST_TYPENAME:
         break;
-    case AST_TYPE_SCALAR:
+    case AST_TYPE_PRIM:
         break;
     case AST_TYPE_PTR:
         break;

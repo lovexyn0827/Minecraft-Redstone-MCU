@@ -33,6 +33,7 @@ void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
     HASH_MAP_INIT(str, symbol_t*, ctx->ast.root.symbol_tbl, 1024, hash_str, &NIL_SYMBOL);
     ctx->ptr = (read_head_t*) malloc(sizeof(read_head_t));
     ctx->ptr->cur_pos = 0;
+    ARRAY_LIST_INIT(uint_t, ctx->ptr->marks);
     ARRAY_LIST_AS_ARRAY(*tokens, ctx->ptr->base);
     ARRAY_LIST_SIZE(*tokens, ctx->ptr->end_pos);
     ctx->cur_scope = (ast_node_t*) &(ctx->ast.root);
