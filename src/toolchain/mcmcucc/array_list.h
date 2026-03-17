@@ -43,6 +43,23 @@
     E = (L).base[(L).size - 1];\
 }
 
+#define ARRAY_LIST_GET(L, E, I) {\
+    uint _I = I;\
+    if (_I < 0 || _I >= (L).size) {\
+        fatal("Out of bound!");\
+    }\
+    E = (L).base[_I];\
+}
+
+#define ARRAY_LIST_TRAVERSE(L, T, V, I, OP) {\
+    T V;\
+    typeof(L) *_Lptr = &(L);\
+    for (uint_t I = 0; I < _Lptr->size; I++) {\
+        ARRAY_LIST_GET(L, V, I)\
+        { OP }\
+    }\
+}
+
 #define ARRAY_LIST_AS_ARRAY(L, A) {\
     A = (L).base;\
 }

@@ -2,6 +2,7 @@
 #define AST_H_INCLUDED
 
 #include "tokenizer.h"
+#include "map.h"
 
 typedef struct symbol_t symbol_t;
 
@@ -388,5 +389,7 @@ typedef struct ast_root {
 typedef struct {
     ast_root_t root;
 } ast_t;
+
+void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field);
 
 #endif // AST_H_INCLUDED

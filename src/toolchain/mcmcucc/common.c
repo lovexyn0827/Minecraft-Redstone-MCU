@@ -7,6 +7,8 @@
 
 extern uint_t error_cnt, warning_cnt;
 
+extern bool verbose;
+
 void fatal(str fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -39,6 +41,7 @@ void info(str fmt, ...) {
 }
 
 void debug(str fmt, ...) {
+    if (!verbose) return;
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);

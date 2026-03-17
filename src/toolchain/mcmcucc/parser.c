@@ -6,8 +6,18 @@
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 extern uint_t error_cnt, warning_cnt;
+
+void fatal_on_token(const token_t *token, str fmt, ...) {
+    printf("On line %d:%d @ %s:\n", token->line_num, token->column_pos, token->token);
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+    exit(-1);
+}
 
 void error_on_token(const token_t *token, str fmt, ...) {
     printf("On line %d:%d @ %s:\n", token->line_num, token->column_pos, token->token);
@@ -54,6 +64,7 @@ const token_t *peek_current_plus_n(read_head_t *ptr, uint_t offset) {
 const token_t *read_current(read_head_t *ptr) {
     // printf(peek_current(ptr));
     assert_inbounds(ptr);
+    debug("Skipping token %s\n", peek_current(ptr)->token);
     return inbounds(ptr) ? ptr->base[ptr->cur_pos++] : NULL;
 }
 
@@ -65,6 +76,7 @@ void unread_prev(read_head_t *ptr) {
 
 void skip_current(read_head_t *ptr) {
     // printf(peek_current(ptr));
+    debug("Skipping token %s\n", peek_current(ptr)->token);
     if (inbounds(ptr)) (ptr->cur_pos)++;
 }
 
@@ -72,9 +84,10 @@ void verify_and_skip_current(read_head_t *ptr, token_type_t type) {
     // printf(peek_current(ptr));
     if (peek_current(ptr)->type != type) {
         error_on_token(peek_current(ptr), "Expected token %d but got %d!\n", type, peek_current(ptr)->type);
+        return;
     }
 
-    if (inbounds(ptr)) (ptr->cur_pos)++;
+    skip_current(ptr);
 }
 
 // *********** Expressions ***********
@@ -162,6 +175,7 @@ uint_t parse_constant_value(const token_t *token) {
 }
 
 bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: primary-expr\n");
     const token_t *first_token = read_current(ctx->ptr);
     switch (first_token->type) {
     case TOKEN_CONST_BIN:
@@ -174,11 +188,11 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         const_node->constant = true;
         const_node->lvalue = false;
         const_node->value = parse_constant_value(first_token);
-        *dest = (ast_expr_t*) const_node;
+        *dest = (ast_expr_t*) const_node;;
         return true;
     case TOKEN_IDENTIFIER:
         ast_expr_symbol_t *sym_node = (ast_expr_symbol_t *) malloc(sizeof(ast_expr_symbol_t));
-        sym_node->node_type = AST_EXPR_CONST;
+        sym_node->node_type = AST_EXPR_SYMBOL;
         sym_node->parent = parent;
         symbol_t *symb = get_symbol(ctx, first_token->token);
         sym_node->symbol = symb;
@@ -198,14 +212,16 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
             error_on_token(first_token, "Undefined symbol: %s\n", first_token->token);
             free(sym_node);
             return true;
+        default:
+            fatal_on_token(first_token, "Unrecognized symbol type %d\n", symb->type);
         }
     case TOKEN_PUNCT_L_P:
         // We've skipped '('
         bool is_expr = parse_expr(ctx, parent, dest);
-        skip_current(ctx->ptr);
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
         return is_expr;
     default:
-
+        error_on_token(first_token, "Unrecognized premable for prim-expr: %d\n", first_token->type);
         return false;
     }
 }
@@ -219,15 +235,17 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest);
 
 bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: postfix-expr\n");
     ast_expr_t *left_hand;
     if (!parse_primary_expr(ctx, NULL, &left_hand)) {
         return false;
     }
 
-    const token_t *postfix_start = read_current(ctx->ptr);
+    const token_t *postfix_start = peek_current(ctx->ptr);
     switch (postfix_start->type) {
     case TOKEN_PUNCT_L_SP:
         // Array subscript
+        skip_current(ctx->ptr);
         ast_expr_binary_t *array_subscr_node = (ast_expr_binary_t*) malloc(sizeof(ast_expr_binary_t));
         array_subscr_node->node_type = AST_EXPR_BINARY;
         array_subscr_node->parent = parent;
@@ -240,8 +258,9 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         *dest = (ast_expr_t*) array_subscr_node;
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_SP); // Skip ']'
         return true;
-    case TOKEN_PUNCT_L_CP:
+    case TOKEN_PUNCT_L_P:
         // Function call
+        skip_current(ctx->ptr);
         ast_expr_call_t *func_call_node = (ast_expr_call_t*) malloc(sizeof(ast_expr_call_t));
         func_call_node->node_type = AST_EXPR_CALL;
         func_call_node->parent = parent;
@@ -267,6 +286,7 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     case TOKEN_PUNCT_DEC:
         // Get and increment
         // Get and decrement
+        skip_current(ctx->ptr);
         ast_expr_unary_t *getinc_node = (ast_expr_unary_t*) malloc(sizeof(ast_expr_unary_t));
         getinc_node->node_type = AST_EXPR_UNARY;
         getinc_node->parent = parent;
@@ -284,7 +304,8 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         return true;
     default:
         // Unexpected
-        return false;
+        *dest = left_hand;
+        return true;
     }
 }
 
@@ -299,12 +320,14 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 bool parse_typename(context_t *ctx, ast_node_t *parent, ast_expr_t **dest);
 
 bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
-    const token_t *prefix = read_current(ctx->ptr);
+    debug(" ==> Parsing: unary-expr\n");
+    const token_t *prefix = peek_current(ctx->ptr);
     switch (prefix->type) {
     case TOKEN_PUNCT_INC:
     case TOKEN_PUNCT_DEC:
         // Increment and get
         // Decrement and get
+        skip_current(ctx->ptr);
         ast_expr_unary_t *getinc_node = (ast_expr_unary_t*) malloc(sizeof(ast_expr_unary_t));
         getinc_node->node_type = AST_EXPR_UNARY;
         getinc_node->parent = parent;
@@ -325,6 +348,7 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     case TOKEN_PUNCT_MINUS:
     case TOKEN_PUNCT_NEG:
     case TOKEN_PUNCT_NOT:
+        skip_current(ctx->ptr);
         ast_expr_unary_t *unary_node = (ast_expr_unary_t*) malloc(sizeof(ast_expr_unary_t));
         unary_node->node_type = AST_EXPR_UNARY;
         unary_node->parent = parent;
@@ -353,12 +377,16 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
             fatal("No way! How did we get there?");
         }
 
-        parse_unary_expr(ctx, (ast_node_t*) unary_node, (ast_expr_t**) &(unary_node->opnd));
+        if (!parse_unary_expr(ctx, (ast_node_t*) unary_node, (ast_expr_t**) &(unary_node->opnd))) {
+            return false;
+        }
+
         unary_node->constant = unary_node->opnd->constant;
         *dest = (ast_expr_t*) unary_node;
         return true;
         // Unary ops
     case TOKEN_KW_SIZEOF:
+        skip_current(ctx->ptr);
         ast_expr_t *sizeof_expr;
         if (parse_unary_expr(ctx, NULL, &sizeof_expr)) {
             ast_expr_sizeof_expr_t *sizeof_node = (ast_expr_sizeof_expr_t *) malloc(sizeof(ast_expr_sizeof_expr_t));
@@ -382,7 +410,6 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
             return true;
         }
     default:
-        unread_prev(ctx->ptr);
         return parse_postfix_expr(ctx, parent, dest);
     }
 }
@@ -392,6 +419,7 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 
 bool parse_cast_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     // FIXME
+    debug(" ==> Parsing: cast-expr\n");
     if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
         ast_expr_cast_t *cast_node = (ast_expr_cast_t*) malloc(sizeof(ast_expr_cast_t));
         cast_node->lvalue = false;
@@ -400,6 +428,7 @@ bool parse_cast_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P); // Skip '('
         if (!parse_typename(ctx, (ast_node_t*) cast_node, (ast_expr_t**) &(cast_node->cast_to))) {
             // It is prim-expr '(E)' instead of '(T) E'
+            free(cast_node);
             unread_prev(ctx->ptr);
             return parse_unary_expr(ctx, parent, dest);
         }
@@ -473,6 +502,7 @@ binary_op_t mult_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_multiplicative_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: mult-expr\n");
     return parse_binary_expr(ctx, parent, dest, mult_op_token_to_op, parse_cast_expr);
 }
 
@@ -492,6 +522,7 @@ binary_op_t additive_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_additive_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: add-expr\n");
     return parse_binary_expr(ctx, parent, dest, additive_op_token_to_op, parse_multiplicative_expr);
 }
 
@@ -511,6 +542,7 @@ binary_op_t shift_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_shift_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: shift-expr\n");
     return parse_binary_expr(ctx, parent, dest, shift_op_token_to_op, parse_additive_expr);
 }
 
@@ -536,6 +568,7 @@ binary_op_t relation_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_relation_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: relation-expr\n");
     return parse_binary_expr(ctx, parent, dest, relation_op_token_to_op, parse_shift_expr);
 }
 
@@ -555,6 +588,7 @@ binary_op_t equality_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_equality_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: equality-expr\n");
     return parse_binary_expr(ctx, parent, dest, equality_op_token_to_op, parse_relation_expr);
 }
 
@@ -566,6 +600,7 @@ binary_op_t and_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_and_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: and-expr\n");
     return parse_binary_expr(ctx, parent, dest, and_op_token_to_op, parse_equality_expr);
 }
 
@@ -577,6 +612,7 @@ binary_op_t xor_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_xor_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: xor-expr\n");
     return parse_binary_expr(ctx, parent, dest, xor_op_token_to_op, parse_and_expr);
 }
 
@@ -588,6 +624,7 @@ binary_op_t or_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_or_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: or-expr\n");
     return parse_binary_expr(ctx, parent, dest, or_op_token_to_op, parse_xor_expr);
 }
 
@@ -599,6 +636,7 @@ binary_op_t land_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_land_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: land-expr\n");
     return parse_binary_expr(ctx, parent, dest, land_op_token_to_op, parse_or_expr);
 }
 
@@ -610,6 +648,7 @@ binary_op_t lor_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_lor_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: lor-expr\n");
     return parse_binary_expr(ctx, parent, dest, lor_op_token_to_op, parse_land_expr);
 }
 
@@ -630,6 +669,7 @@ bool parse_likelyhood_spec(context_t *ctx) {
 }
 
 bool parse_cond_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: cond-expr\n");
     ast_expr_t *left_opnd;
     if (!parse_lor_expr(ctx, parent, &left_opnd)) {
         return false;
@@ -661,10 +701,8 @@ bool parse_cond_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 // assign-op		:= = | *= | /= | %= | += | -= | <<= | >>= | &= | ^= | \|= | <\| | <&
 
 bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: assign-expr\n");
     ast_expr_t *left_opnd;
-    // Apparently, we cannot call parse_multiplicative_expr() unconditionally
-    // We have to push something forward beforehand at least.
-    // Also, we note that mult-expr := cast-expr (mult-op cast-expr)*, which leads to following algorithm
     if (parse_cond_expr(ctx, parent, &left_opnd)) {
         *dest = left_opnd;
         return true;
@@ -715,8 +753,8 @@ bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         assign_op = AOP_CLR;
         break;
     default:
-        error_on_token(assign_op_token, "Unexpected token in assign-expr: %d\n", assign_op_token->type);
-        return false;
+        unread_prev(ctx->ptr);
+        return true;
     }
 
     ast_expr_assign_t *assign_node = (ast_expr_assign_t*) malloc(sizeof(ast_expr_assign_t));
@@ -727,6 +765,7 @@ bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     assign_node->dest = assign_dest;
     parse_assign_expr(ctx, (ast_node_t*) assign_node, (ast_expr_t**) &(assign_node->src));
     assign_node->lvalue = assign_node->src->lvalue;    // XXX
+
     return true;
 }
 
@@ -737,13 +776,20 @@ binary_op_t comma_op_token_to_op(const token_t *op_token) {
 }
 
 bool parse_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    debug(" ==> Parsing: expr\n");
     return parse_binary_expr(ctx, parent, dest, comma_op_token_to_op, parse_assign_expr);
 }
 
 // *********** Type Names ***********
 
 bool parse_typename(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
-    return false;    // Dummy
+    // Dummy
+    if (peek_current(ctx->ptr)->type == TOKEN_KW_UINT8_T) {
+        skip_current(ctx->ptr);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 // *********** Main Procedure ***********
@@ -753,7 +799,8 @@ bool parse_typename(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 // func-def		:= decl-spec declarator decl-list? comp-stmt
 // decl-list	:= decl | decl-list decl
 
-void parse(context_t *ctx, bool verbose) {
+void parse(context_t *ctx) {
     ast_expr_t *expr;
     parse_expr(ctx, NULL, &expr);
+    dump_ast((ast_node_t*) expr, NULL, "Root");
 }

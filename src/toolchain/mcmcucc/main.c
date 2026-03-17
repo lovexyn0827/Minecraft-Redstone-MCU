@@ -9,6 +9,8 @@
 uint_t error_cnt;
 uint_t warning_cnt;
 
+bool verbose;
+
 void debug_print_tokens(token_lst_t *token_lst) {
     uint_t size;
     ARRAY_LIST_SIZE(*token_lst, size);
@@ -30,7 +32,7 @@ void print_error_cnt_and_exit() {
     exit(error_cnt > 0 ? -1 : 0);
 }
 
-int compile(str source, str output, bool verbose) {
+int compile(str source, str output) {
     FILE *fp = fopen(source, "r");
     if (fp == NULL) {
         perror("");
@@ -48,12 +50,13 @@ int compile(str source, str output, bool verbose) {
 
     context_t ctx;
     init_compilation_context(&ctx, &token_lst);
-    parse(&ctx, verbose);
+    parse(&ctx);
     // ...
     print_error_cnt_and_exit();
     return 0;
 }
 
 int main(int argc, char ** argv) {
-    return compile("/home/lovexyn0827/Minecraft-Redstone-MCU/src/test/toolchain/mcmcucc/mcmcucc_test.c", "out.asm", true);
+    verbose = true;
+    return compile("/home/lovexyn0827/Minecraft-Redstone-MCU/src/test/toolchain/mcmcucc/mcmcucc_test.c", "out.asm");
 }

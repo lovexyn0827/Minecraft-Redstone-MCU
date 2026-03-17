@@ -25,7 +25,7 @@ symbol_t *get_symbol(context_t *ctx, str name) {
     return NULL;
 }
 
-symbol_t NIL_SYMBOL = { .type = AST_ROOT, .name = "void", .address = 0 };
+symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "void", .address = 0 };
 
 void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
     ctx->ast.root.node_type = AST_ROOT;
@@ -35,5 +35,5 @@ void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
     ctx->ptr->cur_pos = 0;
     ARRAY_LIST_AS_ARRAY(*tokens, ctx->ptr->base);
     ARRAY_LIST_SIZE(*tokens, ctx->ptr->end_pos);
-    ctx->cur_scope = &(ctx->ast.root);
+    ctx->cur_scope = (ast_node_t*) &(ctx->ast.root);
 }
