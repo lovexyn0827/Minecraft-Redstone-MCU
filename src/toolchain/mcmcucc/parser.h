@@ -4,6 +4,6 @@
 #include "context.h"
 #include "ast.h"
 
-void parse(context_t *ctx, ast_t *ast);
+void parse(context_t *ctx, bool verbose);
 
 #endif // PARSER_H_INCLUDED

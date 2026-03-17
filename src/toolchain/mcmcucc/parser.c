@@ -10,7 +10,7 @@
 extern uint_t error_cnt, warning_cnt;
 
 void error_on_token(const token_t *token, str fmt, ...) {
-    printf("On line %d @ %s:\n", token->line_num, token->token);
+    printf("On line %d:%d @ %s:\n", token->line_num, token->column_pos, token->token);
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);
@@ -19,7 +19,7 @@ void error_on_token(const token_t *token, str fmt, ...) {
 }
 
 void warn_on_token(const token_t *token, str fmt, ...) {
-    printf("On line %d @ %s:\n", token->line_num, token->token);
+    printf("On line %d:%d @ %s:\n", token->line_num, token->column_pos, token->token);
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);
@@ -39,7 +39,7 @@ bool inbounds_after_n(read_head_t *ptr, uint_t offset) {
 
 void assert_inbounds(read_head_t *ptr) {
     if (!inbounds(ptr)) {
-        error("Unexpected end of input.\n");
+        fatal("Unexpected end of input.\n");
     }
 }
 
@@ -53,6 +53,7 @@ const token_t *peek_current_plus_n(read_head_t *ptr, uint_t offset) {
 
 const token_t *read_current(read_head_t *ptr) {
     // printf(peek_current(ptr));
+    assert_inbounds(ptr);
     return inbounds(ptr) ? ptr->base[ptr->cur_pos++] : NULL;
 }
 
@@ -390,13 +391,19 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 // 					| \( type-name \) cast-expr
 
 bool parse_cast_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
+    // FIXME
     if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
         ast_expr_cast_t *cast_node = (ast_expr_cast_t*) malloc(sizeof(ast_expr_cast_t));
         cast_node->lvalue = false;
         cast_node->node_type = AST_EXPR_CAST;
         cast_node->parent = parent;
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P); // Skip '('
-        parse_typename(ctx, (ast_node_t*) cast_node, (ast_expr_t**) &(cast_node->cast_to));
+        if (!parse_typename(ctx, (ast_node_t*) cast_node, (ast_expr_t**) &(cast_node->cast_to))) {
+            // It is prim-expr '(E)' instead of '(T) E'
+            unread_prev(ctx->ptr);
+            return parse_unary_expr(ctx, parent, dest);
+        }
+
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P); // Skip ')'
         if (!parse_cast_expr(ctx, (ast_node_t*) cast_node, (ast_expr_t**) &(cast_node->opnd))) {
             error_on_token(peek_current(ctx->ptr), "Expected cast-expr\n");
@@ -736,7 +743,7 @@ bool parse_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 // *********** Type Names ***********
 
 bool parse_typename(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
-    return true;    // Dummy
+    return false;    // Dummy
 }
 
 // *********** Main Procedure ***********
@@ -746,6 +753,7 @@ bool parse_typename(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 // func-def		:= decl-spec declarator decl-list? comp-stmt
 // decl-list	:= decl | decl-list decl
 
-void parse(context_t *ctx, ast_t *ast) {
-
+void parse(context_t *ctx, bool verbose) {
+    ast_expr_t *expr;
+    parse_expr(ctx, NULL, &expr);
 }

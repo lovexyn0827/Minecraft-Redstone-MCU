@@ -210,16 +210,20 @@ token_type_t read_one_token(FILE *fp, mutable_str buf) {
     }
 }
 
-uint_t skip_whitespaces(FILE *fp) {
+uint_t skip_whitespaces(FILE *fp, uint_t *column) {
     char_t ch;
     uint_t new_line_count = 0;
     while (!feof(fp) && is_whitespace(ch = fgetc(fp))) {
         if (ch == '\n') {
             new_line_count++;
+            *column = 0;
+        } else {
+            (*column)++;
         }
     }
 
     if (!feof(fp)) {
+        column--;
         ungetc(ch, fp);
     }
 
@@ -238,10 +242,11 @@ void init_tokenizer() {
     tokenizer_static_initialized = true;
 }
 
-token_t* create_token(token_type_t token_type, str char_buf, uint_t line_num) {
+token_t* create_token(token_type_t token_type, str char_buf, uint_t line_num, uint_t column) {
     token_t * new_token = (token_t*) malloc(sizeof(token_t));
     new_token->type = token_type;
     new_token->line_num = line_num;
+    new_token->column_pos = column;
     mutable_str token_str = (mutable_str) malloc(sizeof(char_t) * strlen(char_buf));
     strcpy(token_str, char_buf);
     new_token->token = token_str;
@@ -251,19 +256,27 @@ token_t* create_token(token_type_t token_type, str char_buf, uint_t line_num) {
 void tokenize(FILE *fp, token_lst_t *token_lst) {
     if (!tokenizer_static_initialized) init_tokenizer();
     uint_t line_num = 1;
+    uint_t column = 0;
     while (!feof(fp)) {
-        line_num += skip_whitespaces(fp);
+        skip_whitespaces(fp, &column);
         char_t char_buf[1024];
+        uint_t prev_pos = ftell(fp);
         token_type_t token_type = read_one_token(fp, char_buf);
+        uint_t token_len = ftell(fp) - prev_pos;
+        column += token_len;
         if (strlen(char_buf) == 0) continue;
         if (token_type == TOKEN_PUNCT_COMMENT) {
             skip_to_next_line(fp);
             line_num++;
+            column = 0;
         } else if (token_type == TOKEN_ERROR) {
             error("Unrecognized token: ", token_type);
         } else {
-            token_t *new_token = create_token(token_type, char_buf, line_num);
+            token_t *new_token = create_token(token_type, char_buf, line_num, column);
             ARRAY_LIST_APPEND(*token_lst, new_token, const token_t*);
         }
     }
+
+    token_t *eof_token = create_token(TOKEN_EOF, "", line_num, column);
+    ARRAY_LIST_APPEND(*token_lst, eof_token, const token_t*);
 }

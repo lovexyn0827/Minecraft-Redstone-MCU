@@ -78,6 +78,7 @@ typedef enum {
     TOKEN_PUNCT_CLR,
     TOKEN_PUNCT_COMMA,
     TOKEN_PUNCT_COMMENT,
+    TOKEN_EOF = 0x1000,
     TOKEN_ERROR = 0x0000
 } token_type_t;
 
@@ -85,6 +86,7 @@ typedef struct {
     str token;
     token_type_t type;
     uint_t line_num;
+    uint_t column_pos;
 } token_t;
 
 typedef ARRAY_LIST_TYPE(const token_t *) token_lst_t;

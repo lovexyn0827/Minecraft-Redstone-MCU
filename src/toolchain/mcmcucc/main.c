@@ -1,6 +1,10 @@
 #include "tokenizer.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+
+#include "context.h"
+#include "parser.h"
 
 uint_t error_cnt;
 uint_t warning_cnt;
@@ -17,17 +21,39 @@ void debug_print_tokens(token_lst_t *token_lst) {
         prev_line_num = cur_token->line_num;
         debug("%s ", cur_token->token);
     }
+
+    putchar('\n');
 }
 
-int main(int argc, char ** argv) {
-    FILE *fp = fopen("D:/rs_ecc.c", "r");
+void print_error_cnt_and_exit() {
+    printf("%d Errors, %d Warnings\n", error_cnt, warning_cnt);
+    exit(error_cnt > 0 ? -1 : 0);
+}
+
+int compile(str source, str output, bool verbose) {
+    FILE *fp = fopen(source, "r");
     if (fp == NULL) {
-        fatal("Failed to open %s!\n", "D:/rs_ecc.c");
+        perror("");
+        fatal("Failed to open %s!\n", source);
     }
 
     token_lst_t token_lst;
     ARRAY_LIST_INIT(token_t, token_lst);
     tokenize(fp, &token_lst);
-    debug_print_tokens(&token_lst);
+    if (verbose) debug_print_tokens(&token_lst);
     fclose(fp);
+    if (error_cnt > 0) {
+        print_error_cnt_and_exit();
+    }
+
+    context_t ctx;
+    init_compilation_context(&ctx, &token_lst);
+    parse(&ctx, verbose);
+    // ...
+    print_error_cnt_and_exit();
+    return 0;
+}
+
+int main(int argc, char ** argv) {
+    return compile("/home/lovexyn0827/Minecraft-Redstone-MCU/src/test/toolchain/mcmcucc/mcmcucc_test.c", "out.asm", true);
 }

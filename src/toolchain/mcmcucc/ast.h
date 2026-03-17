@@ -386,7 +386,7 @@ typedef struct ast_root {
 } ast_root_t;
 
 typedef struct {
-    ast_node_t root;
+    ast_root_t root;
 } ast_t;
 
 #endif // AST_H_INCLUDED

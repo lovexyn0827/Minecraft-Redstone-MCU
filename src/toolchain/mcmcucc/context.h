@@ -23,17 +23,17 @@ typedef enum {
 typedef struct symbol_t {
     symbol_type_t type;
     str name;
-    union {
-        // ...
-    } content;
+    uint_t address;
 } symbol_t;
 
-typedef struct {
+typedef struct context {
     read_head_t *ptr;
     ast_node_t *cur_scope;
     ast_t ast;
 } context_t;
 
 symbol_t *get_symbol(context_t *ctx, str name);
+
+void init_compilation_context(context_t *ctx, token_lst_t *tokens);
 
 #endif // CONTEXT_H_INCLUDED
