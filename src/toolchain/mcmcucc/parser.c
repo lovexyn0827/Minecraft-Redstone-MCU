@@ -896,50 +896,67 @@ bool parse_decl_specifier(context_t *ctx, ast_node_t *parent, ast_typename_t *un
 // drct-abst-decl	:= ( abst-declarator )
 // 					| drct-abst-decl? ( param-list? )
 
-bool parse_abstract_declarator(context_t *ctx, uint_t spec, ast_node_t *parent, ast_typename_t **dest);
 bool parse_param_list(context_t *ctx, ast_node_t *parent, param_list_t *dest);
 
-bool parse_drct_abst_declarator(context_t *ctx, uint_t spec, ast_node_t *parent, ast_typename_t **dest) {
-    // Again, we've run into the same problem as the one in parse_cast_expr();
-    // We have to avoid indefinite recursion and misdispatches.
-    // Fortunately abst-declarator recurses to here
+// abst-declarator	:= pointer
+// 					| pointer? drct-abst-decl
+
+// What makes everthing tricky is that parents are types to derived from - implying a reversed parental relationship.
+// Let A, B, P denote abst-decl, drct-abst-decl, pointer respectively
+// Since A := P | P? B and B := (A) | B(Q), we have A := P | P? (A) (Q?)*
+// And considering sematic constains, we have A := P | P? ( A ) | P? ( A ) ( Q? )
+// (Functions ARE also types, but only pointers to functions can be returned.)
+// Which means the resulting syntax tree is "linear" and the deepest node is well defined.
+// Thus, we can omit intermediate B and treat branches in A as transformations for better clearity.
+// Finally, we recognize leaves by A's consisting of only a P instance.
+//
+// Note that the recursion in function types is "evaluated after" function type derivations, or P before (Q) in B.
+// E.g. in int * ( A' ) ( Q ), int is transformed into int*, then int * (Q), and then further transformeb by A'.
+// Thus we must read Q first to complete function type derivation before recursion, which may reqiure one more pass.
+// In the first of which we may push recursive derivations into a stack, and pop & apply in the second pass.
+
+bool parse_abst_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, ast_typename_t **dest) {
+    ast_typename_t *derived_type;
+    mark_current(ctx->ptr);
+    bool has_ptr_decl;
+    if (has_ptr_decl = parse_pointer_decl(ctx, parent, type_in, &derived_type)) {
+        type_in = derived_type;
+    }
+
     if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
-        mark_current(ctx->ptr);
+        // ( A ) part
         skip_current(ctx->ptr);
-        if (!parse_abstract_declarator(ctx, spec, (ast_node_t*) parent, (ast_typename_t**) dest)) {
-            return_marked(ctx->ptr);
-            return false;
+        if (!parse_abstract_declarator(ctx, parent, type_in, (ast_typename_t**) &derived_type)) {
+            if (has_ptr_decl) {
+                return true;
+            } else {
+                return_marked(ctx->ptr);
+                return false;
+            }
+        } else {
+            type_in = derived_type;
         }
 
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
         return true;
     } else {
+        // A := P and nothing follows
+        return true;
+    }
+
+    if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
+        // A := P? ( A ) ( Q ) and we are parsing ( Q ) since P? ( A ) has already been processed
         ast_typename_funct_t *func_type = (ast_typename_funct_t*) malloc(sizeof(ast_typename_funct_t));
         func_type->node_type = AST_TYPE_FUNCT;
         func_type->parent = parent;
+        func_type->return_type = derived_type;
         mark_current(ctx->ptr);
-        if (!parse_abstract_declarator(ctx, spec, (ast_node_t*) func_type,
-                (ast_typename_t**) &(func_type->return_type))) {
-            return_marked(ctx->ptr);
-            free(func_type);
-            return false;
-        }
-
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
-             parse_param_list(ctx, (ast_node_t*) func_type, &(func_type->param_type));
+        parse_param_list(ctx, (ast_node_t*) func_type, &(func_type->param_type));
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
-        return true;
+    } else {
     }
 }
-
-// abst-declarator	:= pointer
-// 					| pointer? drct-abst-decl
-
-// Let A, B, P denote abst-decl, drct-abst-decl, pointer respectively
-// Since A := P | P? B and B := (A) | B(Q), we have A := P | P? (A) (Q?)*
-// And considering sematic constains, we have A := P | P? ( A ) | P? ( A ) ( Q? )
-// Which means the resulting syntax tree is "linear" and the deepest node is well defined
-// Thus, we can omit intermediate B and treat branchings as transformations for better clearity
 
 void type_spec_to_ast_typename_node(uint_t spec, ast_node_t *parent, ast_typename_t **dest) {
     ast_typename_prim_t *new_node = (ast_typename_prim_t*) malloc(sizeof(ast_typename_prim_t));
@@ -955,19 +972,12 @@ void type_spec_to_ast_typename_node(uint_t spec, ast_node_t *parent, ast_typenam
     }
 }
 
-bool parse_abstract_declarator(context_t *ctx, uint_t spec, ast_node_t *parent, ast_typename_t **dest) {
-    ast_typename_t *declaration_type, *declarator_type;
-    type_spec_to_ast_typename_node(spec, NULL, &declaration_type);
-    return false;
-}
-
-int *(****(**f)(void))(void);
+char (*(*f)(float)) (void);
 
 bool parse_typename(context_t *ctx, ast_node_t *parent, ast_typename_t **dest) {
     debug(" ==> Parsing: type-name\n");
     // TODO
-    int k = (*f)();
-    return k == 0;
+    int k = f(1);
 }
 
 // *********** Main Procedure ***********
