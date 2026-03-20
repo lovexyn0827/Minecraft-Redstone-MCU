@@ -68,6 +68,8 @@
     SZ = (L).size;\
 }
 
+#define ARRAY_LIST_EMPTY_INLINE(L) ((L).size > 0)
+
 #define ARRAY_LIST_FREE(L) {\
     free((L).base);\
 }

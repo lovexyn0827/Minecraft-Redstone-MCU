@@ -12,6 +12,8 @@ symbol_t *get_symbol(context_t *ctx, str name) {
             symbol_tbl = &(((const ast_root_t*) scope)->symbol_tbl);
         } else if (scope->node_type == AST_FUNC_IMPL) {
             symbol_tbl = &(((const ast_function_impl_t*) scope)->symbol_tbl);
+        } else if (scope->node_type == AST_DECL_DRCT_FN) {
+            symbol_tbl = &(((const ast_decl_direct_function_t*) scope)->symbol_tbl);
         }
 
         symbol_t *symbol;
@@ -27,7 +29,8 @@ symbol_t *get_symbol(context_t *ctx, str name) {
     return NULL;
 }
 
-symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "void", .address = 0 };
+symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Null]", .address = 0 };
+symbol_t UNSPECIFIED_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Unspecified]", .address = 0 };
 
 void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
     ctx->ast.root.node_type = AST_ROOT;

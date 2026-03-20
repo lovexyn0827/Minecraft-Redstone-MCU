@@ -34,6 +34,7 @@ typedef enum ast_node_type {
     AST_STMT_LABELED,
     AST_DECL = 0x04000,
     AST_DECL_DRCT_FN,
+    AST_DECL_DRCT_PARAM,
     AST_DECL_DRCT_VAR,
     AST_DECL_DRCT_ARRAY,
     AST_EXPR = 0x08000,
@@ -84,7 +85,8 @@ typedef struct ast_typename_ptr {
     const ast_typename_t *underlying_type;
 } ast_typename_ptr_t;
 
-typedef ARRAY_LIST_TYPE(const ast_typename_t *) param_list_t;
+typedef struct ast_decl_direct_param ast_decl_direct_param_t;
+typedef ARRAY_LIST_TYPE(const ast_decl_direct_param_t *) param_list_t;
 
 typedef struct ast_typename_funct {
     AST_TYPENAME_NODE_SHARED_FIELDS
@@ -242,7 +244,14 @@ typedef struct ast_decl_direct_function {
     const symbol_t *func_name;
     const ast_expr_t *initializer;
     bool inline_func;
+    symbol_tbl_t symbol_tbl;
 } ast_decl_direct_function_t;
+
+typedef struct ast_decl_direct_param {
+    AST_DECL_SHARED_FIELDS
+    const ast_typename_t *var_type;
+    const symbol_t *var_name;
+} ast_decl_direct_param_t;
 
 typedef struct ast_decl_direct_variable {
     AST_DECL_SHARED_FIELDS

@@ -58,6 +58,8 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         break;
     case AST_DECL_DRCT_FN:
         break;
+    case AST_DECL_DRCT_PARAM:
+        break;
     case AST_DECL_DRCT_VAR:
         break;
     case AST_DECL_DRCT_ARRAY:
