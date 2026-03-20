@@ -10,6 +10,8 @@ symbol_t *get_symbol(context_t *ctx, str name) {
             symbol_tbl = &(((const ast_stmt_compound_t*) scope)->symbol_tbl);
         } else if (scope->node_type == AST_ROOT) {
             symbol_tbl = &(((const ast_root_t*) scope)->symbol_tbl);
+        } else if (scope->node_type == AST_FUNC_IMPL) {
+            symbol_tbl = &(((const ast_function_impl_t*) scope)->symbol_tbl);
         }
 
         symbol_t *symbol;

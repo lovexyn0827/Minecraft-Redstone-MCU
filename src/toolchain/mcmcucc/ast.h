@@ -281,7 +281,7 @@ typedef struct ast_stmt_compound {
     ARRAY_LIST_TYPE(const ast_stmt_t *) statements;
     const uint_t entry_address;
     const uint_t end_address;
-    symbol_tbl_t symbol_tbl;\
+    symbol_tbl_t symbol_tbl;
 } ast_stmt_compound_t;
 
 typedef struct ast_stmt_if {
@@ -389,6 +389,7 @@ typedef struct ast_function_impl {
     const ast_decl_direct_function_t *decl;
     const ast_stmt_compound_t *body;
     uint_t address;
+    symbol_tbl_t symbol_tbl;
 } ast_function_impl_t;
 
 // *********** AST ***********
