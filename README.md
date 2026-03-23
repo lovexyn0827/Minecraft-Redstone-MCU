@@ -414,7 +414,8 @@ token 		:= keyword | identifier | number | punctuator
 
 keyword 	:= break | case | const | continue | default | do | else 
 				| for | goto | if | inline | int8_t | uint8_t | likely 
-				| return | sizeof | switch | unlikely | void | while
+				| register | return | sizeof | switch | unlikely | void 
+				| while
 
 identifier	:= nodigit 
 				| (identifier nodigit) 
@@ -516,11 +517,9 @@ drct-declarator	:= identifier
 					| drct-declarator ( param-list? )
 pointer			:= * const? | * const? pointer
 param-list		:= param-decl | param-list , param-decl
-param-decl		:= decl-spec declarator
-					| decl-spec abst-declarator
-type-name		:= const? type-spec abst-declarator?
-abst-declarator	:= pointer
-					| pointer? drct-abst-decl
+param-decl		:= decl-spec declarator | type-name
+type-name		:= decl-spec abst-declarator?
+abst-declarator	:= pointer | pointer? drct-abst-decl
 drct-abst-decl	:= ( abst-declarator )
 					| drct-abst-decl? ( param-list? )
 
