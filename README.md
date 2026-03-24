@@ -515,6 +515,7 @@ declarator		:= pointer? drct-declarator
 drct-declarator	:= identifier
 					| ( declarator )
 					| drct-declarator ( param-list? )
+					| drct-declarator [ const-expr ]
 pointer			:= * const? | * const? pointer
 param-list		:= param-decl | param-list , param-decl
 param-decl		:= decl-spec declarator | type-name

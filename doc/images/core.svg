@@ -188,8 +188,8 @@
 		<path d="M365 310 H380" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		<path d="M400 300 H525" stroke="black" stroke-width="3" fill="none" marker-end="url(#arrow)" />
 		
-		<path d="M420 330 V43 H390 V35" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
-		<path d="M420 330 V323 H390 V315" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M420 340 V43 H390 V35" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
+		<path d="M420 340 V323 H390 V315" stroke="black" stroke-width="1.5" fill="none" marker-end="url(#arrow)" />
 		
 		<text x="360" y="35" class="small">0</text>
 		<text x="360" y="315" class="small">0</text>
