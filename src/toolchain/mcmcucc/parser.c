@@ -186,7 +186,7 @@ uint_t parse_constant_value(const token_t *token) {
 
 bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     debug(" ==> Parsing: primary-expr\n");
-    const token_t *first_token = read_current(ctx->ptr);
+    const token_t *first_token = peek_current(ctx->ptr);
     switch (first_token->type) {
     case TOKEN_CONST_BIN:
     case TOKEN_CONST_DEC:
@@ -198,7 +198,8 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         const_node->constant = true;
         const_node->lvalue = false;
         const_node->value = parse_constant_value(first_token);
-        *dest = (ast_expr_t*) const_node;;
+        *dest = (ast_expr_t*) const_node;
+        skip_current(ctx->ptr);
         return true;
     case TOKEN_IDENTIFIER:
         ast_expr_symbol_t *sym_node = (ast_expr_symbol_t *) malloc(sizeof(ast_expr_symbol_t));
@@ -206,6 +207,7 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         sym_node->parent = parent;
         symbol_t *symb = get_symbol(ctx, first_token->token);
         sym_node->symbol = symb;
+        skip_current(ctx->ptr);
         switch (symb->type) {
         case SYM_FUNCTION:
         case SYM_LABEL:
@@ -220,18 +222,17 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
             return true;
         case SYM_NOTEXIST:
             error_on_token(first_token, "Undefined symbol: %s\n", first_token->token);
-            free(sym_node);
             return true;
         default:
             fatal_on_token(first_token, "Unrecognized symbol type %d\n", symb->type);
         }
     case TOKEN_PUNCT_L_P:
+        skip_current(ctx->ptr);
         // We've skipped '('
         bool is_expr = parse_expr(ctx, parent, dest);
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
         return is_expr;
     default:
-        error_on_token(first_token, "Unrecognized premable for prim-expr: %d\n", first_token->type);
         return false;
     }
 }
@@ -713,11 +714,7 @@ bool parse_cond_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     debug(" ==> Parsing: assign-expr\n");
     ast_expr_t *left_opnd;
-    if (parse_cond_expr(ctx, parent, &left_opnd)) {
-        *dest = left_opnd;
-        return true;
-    }
-
+    mark_current(ctx->ptr);
     ast_expr_t *assign_dest;
     parse_unary_expr(ctx, parent, &assign_dest);
     assign_op_t assign_op;
@@ -763,7 +760,11 @@ bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         assign_op = AOP_CLR;
         break;
     default:
-        unread_prev(ctx->ptr);
+        return_marked(ctx->ptr);
+        if (parse_cond_expr(ctx, parent, &left_opnd)) {
+            *dest = left_opnd;
+        }
+
         return true;
     }
 
@@ -978,17 +979,11 @@ bool parse_abst_declarator_internal(context_t *ctx, type_derivation_stack_t *der
     return true;
 }
 
-bool parse_abst_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, ast_typename_t **dest) {
-    mark_current(ctx->ptr);
-    type_derivation_stack_t derivations;
-    ARRAY_LIST_INIT(const type_derivation_t*, derivations)
-    if (!parse_abst_declarator_internal(ctx, &derivations)) {
-        return false;
-    }
-
-    while (!ARRAY_LIST_EMPTY_INLINE(derivations)) {
+ast_typename_t *derive_type(context_t *ctx, type_derivation_stack_t *derivations,
+                            ast_typename_t *type_in, ast_node_t *parent) {
+    while (!ARRAY_LIST_EMPTY_INLINE(*derivations)) {
         const type_derivation_t *derivation;
-        ARRAY_LIST_REMOVE_TAIL(derivations, derivation)
+        ARRAY_LIST_REMOVE_TAIL(*derivations, derivation)
         switch (derivation->type) {
         case DERIVATION_FUNCTION:
             const type_derivation_function_t *fn_derv = (type_derivation_function_t*) derivation;
@@ -1018,7 +1013,18 @@ bool parse_abst_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *t
     }
 
     type_in->parent = parent;
-    *dest = (ast_typename_t*) type_in;
+    return type_in;
+}
+
+bool parse_abst_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, ast_typename_t **dest) {
+    mark_current(ctx->ptr);
+    type_derivation_stack_t derivations;
+    ARRAY_LIST_INIT(const type_derivation_t*, derivations)
+    if (!parse_abst_declarator_internal(ctx, &derivations)) {
+        return false;
+    }
+
+    *dest = derive_type(ctx, &derivations, type_in, parent);
     return true;
 }
 
@@ -1040,30 +1046,32 @@ void type_spec_to_ast_typename_node(uint_t spec, ast_node_t *parent, ast_typenam
 
 // param-decl		:= decl-spec declarator | type-name
 
-bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *decl_type, ast_decl_t **dest);
+bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, uint_t spec, ast_decl_t **dest);
 
 extern symbol_t UNSPECIFIED_SYMBOL;
 
-bool parse_param_decl(context_t *ctx, ast_decl_direct_param_t **dest) {
+bool parse_param_decl(context_t *ctx, ast_decl_direct_variable_t **dest) {
     debug(" ==> Parsing: param-decl\n");
     uint_t decl_spec = 0;
-    ast_decl_direct_param_t *param_decl = (ast_decl_direct_param_t*) malloc(sizeof(ast_decl_direct_param_t));
-    param_decl->node_type = AST_DECL_DRCT_PARAM;
+    ast_decl_direct_variable_t *param_decl = (ast_decl_direct_variable_t*) malloc(sizeof(ast_decl_direct_variable_t));
+    param_decl->node_type = AST_DECL_DRCT_VAR;
     param_decl->parent = NULL;
-    if (parse_typename(ctx, (ast_node_t*) param_decl, (ast_typename_t**) &(param_decl->var_type))) {
-        param_decl->var_name = &UNSPECIFIED_SYMBOL;
+    param_decl->initializer = NULL;
+    param_decl->register_var = true;
+    if (parse_typename(ctx, (ast_node_t*) param_decl, (ast_typename_t**) &(param_decl->decl_type))) {
+        param_decl->decl_name = &UNSPECIFIED_SYMBOL;
     } else if (parse_decl_specifier(ctx, &decl_spec)) {
         ast_typename_t *decl_type;
         type_spec_to_ast_typename_node(decl_spec, (ast_node_t*) param_decl, (ast_typename_t**) &decl_type);
         ast_decl_direct_variable_t *param_var_decl;
-        parse_declarator(ctx, (ast_node_t*) param_decl, decl_type, (ast_decl_t**) &param_var_decl);
-        if (param_var_decl->var_name->type != SYM_VARIABLE) {
+        parse_declarator(ctx, (ast_node_t*) param_decl, decl_type, decl_spec, (ast_decl_t**) &param_var_decl);
+        if (param_var_decl->decl_name->type != SYM_VARIABLE) {
             error_on_token(peek_current(ctx->ptr), "Parameters must be variables!\n");
             return false;
         }
 
-        param_decl->var_name = param_var_decl->var_name;
-        param_decl->var_type = param_var_decl->var_type;
+        param_decl->decl_name = param_var_decl->decl_name;
+        param_decl->decl_type = param_var_decl->decl_type;
     } else {
         return false;
     }
@@ -1077,9 +1085,9 @@ bool parse_param_decl(context_t *ctx, ast_decl_direct_param_t **dest) {
 bool parse_param_list(context_t *ctx, param_list_t *dest) {
     debug(" ==> Parsing: param-list\n");
     while (peek_current(ctx->ptr)->type != TOKEN_PUNCT_R_P) {
-        ast_decl_direct_param_t *param_decl;
+        ast_decl_direct_variable_t *param_decl;
         if (parse_param_decl(ctx, &param_decl)) {
-            ARRAY_LIST_APPEND(*dest, param_decl, ast_decl_direct_param_t);
+            ARRAY_LIST_APPEND(*dest, param_decl, ast_decl_direct_variable_t);
         } else {
             return false;
         }
@@ -1112,17 +1120,19 @@ bool parse_typename(context_t *ctx, ast_node_t *parent, ast_typename_t **dest) {
 // drct-declarator	:= identifier
 // 					| ( declarator )
 // 					| drct-declarator ( param-list? )
+//                  | drct-declarator [ const-expr ]
 
 // We shall follow the same scheme we've applied to parse abst-declarators
 
-bool parse_declarator_internal(context_t *ctx, type_derivation_stack_t *derivations, const token_t **ident) {
+bool parse_declarator_internal(context_t *ctx, type_derivation_stack_t *derivations,
+                               const token_t **ident, ast_expr_t **array_len) {
     type_derivation_pointer_t *ptr_derivation;
     bool has_ptr_decl;
     has_ptr_decl = parse_pointer_decl(ctx, &ptr_derivation);
     if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
         // ( A ) part
         skip_current(ctx->ptr);
-        if (!parse_declarator_internal(ctx, derivations, ident)) {
+        if (!parse_declarator_internal(ctx, derivations, ident, array_len)) {
             if (has_ptr_decl) {
                 return true;
             } else {
@@ -1133,8 +1143,11 @@ bool parse_declarator_internal(context_t *ctx, type_derivation_stack_t *derivati
 
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
     } else {
-        // A := P and an identifier follows
-        ARRAY_LIST_APPEND(*derivations, ((type_derivation_t*) ptr_derivation), type_derivation_t*);
+        // A := P? and an identifier follows
+        if (has_ptr_decl) {
+            ARRAY_LIST_APPEND(*derivations, ((type_derivation_t*) ptr_derivation), type_derivation_t*);
+        }
+
         if (peek_current(ctx->ptr)->type == TOKEN_IDENTIFIER) {
             *ident = read_current(ctx->ptr);
             return true;
@@ -1162,46 +1175,122 @@ bool parse_declarator_internal(context_t *ctx, type_derivation_stack_t *derivati
     return true;
 }
 
-bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, ast_decl_t **dest) {
+
+
+bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, uint_t spec, ast_decl_t **dest) {
     mark_current(ctx->ptr);
     type_derivation_stack_t derivations;
+    ARRAY_LIST_INIT(const type_derivation_t*, derivations)
     const token_t *ident_token;
-    if (!parse_declarator_internal(ctx, &derivations, &ident_token)) {
+    ast_expr_t *array_len;
+    if (!parse_declarator_internal(ctx, &derivations, &ident_token, &array_len)) {
         return false;
     }
 
-    while (!ARRAY_LIST_EMPTY_INLINE(derivations)) {
-        const type_derivation_t *derivation;
-        ARRAY_LIST_REMOVE_TAIL(derivations, derivation)
-        switch (derivation->type) {
-        case DERIVATION_FUNCTION:
-            const type_derivation_function_t *fn_derv = (type_derivation_function_t*) derivation;
-            ast_typename_funct_t *fn_node = (ast_typename_funct_t*) malloc(sizeof(ast_typename_funct_t));
-            fn_node->node_type = AST_TYPE_FUNCT;
-            type_in->parent = (ast_node_t*) fn_node;
-            fn_node->return_type = type_in;
-            fn_node->immutable = false;
-            memcpy(&(fn_node->param_type), &(fn_derv->params), sizeof(param_list_t));
-            type_in = (ast_typename_t*) fn_node;
-            break;
-        case DERIVATION_POINTER:
-            const type_derivation_pointer_t *ptr_derv = (type_derivation_pointer_t*) derivation;
-            ARRAY_LIST_TRAVERSE(ptr_derv->constant, bool, constant, i, {
-                ast_typename_ptr_t *ptr_node = (ast_typename_ptr_t*) malloc(sizeof(ast_typename_ptr_t));
-                ptr_node->node_type = AST_TYPE_PTR;
-                type_in->parent = (ast_node_t*) ptr_node;
-                ptr_node->immutable = constant;
-                ptr_node->underlying_type = type_in;
-                type_in = (ast_typename_t*) ptr_derv;
-            })
-            break;
-        default:
-            fatal_on_token(peek_current(ctx->ptr), "Unrecognized type derivation: %d\n", derivation->type);
-            return false;
+    ast_decl_t *decl_node;
+    ast_typename_t *decl_type = derive_type(ctx, &derivations, type_in, parent);
+    switch (decl_type->node_type) {
+    case AST_TYPE_PRIM:
+    case AST_TYPE_PTR:
+        ast_decl_direct_variable_t *var_decl = (ast_decl_direct_variable_t*) malloc(sizeof(ast_decl_direct_variable_t));
+        var_decl->decl_type = decl_type;
+        var_decl->node_type = AST_DECL_DRCT_VAR;
+        var_decl->parent = parent;
+        if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_ASSIGN) {
+            skip_current(ctx->ptr);
+            parse_assign_expr(ctx, (ast_node_t*) var_decl, (ast_expr_t**) &(var_decl->initializer));
+        } else {
+            var_decl->initializer = NULL;
         }
+
+        var_decl->register_var = (spec & DECL_SPEC_REGISTER) != 0;
+        var_decl->decl_name = register_declared_symbol(ctx, ident_token->token, (ast_decl_t*) var_decl);
+        decl_node = (ast_decl_t*) var_decl;
+        break;
+    case AST_TYPE_FUNCT:
+        ast_decl_direct_function_t *fn_decl = (ast_decl_direct_function_t*) malloc(sizeof(ast_decl_direct_function_t));
+        fn_decl->node_type = AST_DECL_DRCT_FN;
+        fn_decl->parent = parent;
+        if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_ASSIGN) {
+            skip_current(ctx->ptr);
+            parse_assign_expr(ctx, (ast_node_t*) fn_decl, (ast_expr_t**) &(fn_decl->initializer));
+        } else {
+            fn_decl->initializer = NULL;
+        }
+
+        fn_decl->decl_type = decl_type;
+        fn_decl->inline_func = (spec & DECL_SPEC_INLINE) != 0;
+        fn_decl->decl_name = register_declared_symbol(ctx, ident_token->token, (ast_decl_t*) fn_decl);
+        HASH_MAP_INIT(str, symbol_t*, fn_decl->symbol_tbl, 256, hash_str, &NIL_SYMBOL)
+        decl_node = (ast_decl_t*) fn_decl;
+        break;
+    default:
+        fatal("No way!\n");
+        return false;
     }
 
+    register_declared_symbol(ctx, ident_token->token, decl_node);
     type_in->parent = parent;
+    *dest = decl_node;
+    return true;
+}
+
+// *********** Statements ***********
+
+// decl			:= decl-spec init-decl-list? ;
+// init-decl-list	:= init-decl | init-decl-list, init-decl
+// init-decl		:= declarator | declarator = assign-expr
+
+bool parse_decl_stmt(context_t *ctx, ast_node_t *parent, stmt_list_t *dest) {
+    uint_t decl_spec;
+    if (!parse_decl_specifier(ctx, &decl_spec)) {
+        return false;
+    }
+
+    do {
+        ast_stmt_decl_t *decl_stmt = (ast_stmt_decl_t*) malloc(sizeof(ast_stmt_decl_t));
+        decl_stmt->node_type = AST_STMT_DECL;
+        decl_stmt->parent = parent;
+        ast_typename_prim_t *decl_type;
+        type_spec_to_ast_typename_node(decl_spec, NULL, (ast_typename_t**) &decl_type);
+        parse_declarator(ctx, (ast_node_t*) decl_stmt, (ast_typename_t*) decl_type,
+                         decl_spec, (ast_decl_t**) &(decl_stmt->decl));
+        ARRAY_LIST_APPEND(*dest, (const ast_stmt_t*) decl_stmt, const ast_stmt_t*)
+    } while (read_current(ctx->ptr)->type == TOKEN_PUNCT_COMMA);
+    unread_prev(ctx->ptr);
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+    return true;
+}
+
+// expr-stmt		:= expr? ;
+
+bool parse_expr_stmt(context_t *ctx, ast_node_t *parent, stmt_list_t *dest) {
+    if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_SEMICOLON) {
+        skip_current(ctx->ptr);
+        return true;
+    }
+
+    ast_stmt_expr_t *expr_stmt = (ast_stmt_expr_t*) malloc(sizeof(ast_stmt_expr_t));
+    if (!parse_expr(ctx, (ast_node_t*) expr_stmt, (ast_expr_t**) &(expr_stmt->expr))) {
+        free(expr_stmt);
+        return false;
+    } else {
+        expr_stmt->node_type = AST_STMT_EXPR;
+        expr_stmt->parent = parent;
+        ARRAY_LIST_APPEND(*dest, (const ast_stmt_t*) expr_stmt, const ast_stmt_t*)
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+        return true;
+    }
+}
+
+// stmt			:= labeled-stmt
+// 					| comp-stmt
+// 					| expr-stmt
+// 					| select-stmt
+// 					| iter-stmt
+// 					| jump-stmt
+
+bool parse_stmt(context_t *ctx, ast_node_t *parent, stmt_list_t *dest) {
     return true;
 }
 
@@ -1213,7 +1302,14 @@ bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_i
 // decl-list	:= decl | decl-list decl
 
 void parse(context_t *ctx) {
-    ast_expr_t *expr;
-    parse_expr(ctx, NULL, &expr);
-    dump_ast((ast_node_t*) expr, NULL, "Root");
+    // ast_expr_t *expr;
+    // parse_expr(ctx, NULL, &expr);
+    // dump_ast((ast_node_t*) expr, NULL, "Root");
+    stmt_list_t stmts;
+    ARRAY_LIST_INIT(const ast_stmt_t*, stmts)
+    parse_decl_stmt(ctx, NULL, &stmts);
+    parse_expr_stmt(ctx, NULL, &stmts);
+    ARRAY_LIST_TRAVERSE(stmts, const ast_stmt_t*, stmt, i, {
+        dump_ast((ast_node_t*) stmt, NULL, "");
+    })
 }

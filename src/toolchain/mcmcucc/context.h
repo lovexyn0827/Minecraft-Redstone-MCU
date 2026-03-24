@@ -24,6 +24,8 @@ typedef enum {
 typedef struct symbol_t {
     symbol_type_t type;
     str name;
+    const ast_decl_t *decl;
+    bool immutable;
     uint_t address;
 } symbol_t;
 
@@ -34,6 +36,10 @@ typedef struct context {
 } context_t;
 
 symbol_t *get_symbol(context_t *ctx, str name);
+symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *decl);
+void register_label(context_t *ctx, str name);
+
+extern symbol_t NIL_SYMBOL;
 
 void init_compilation_context(context_t *ctx, token_lst_t *tokens);
 

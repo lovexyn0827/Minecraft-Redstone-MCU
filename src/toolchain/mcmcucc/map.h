@@ -40,8 +40,8 @@
 #define HASH_MAP_PUT_RET(M, Kval, Vval, K, V, CMP, R) {\
     K __key_backup_map = Kval;\
     V __val_backup_map = Vval;\
-    uint_t slot_no = (M).hash(__key_backup_map) % M.size;\
-    typeof((M).slots[slot_no]) node = M.slots[slot_no];\
+    uint_t slot_no = (M).hash(__key_backup_map) % (M).size;\
+    typeof((M).slots[slot_no]) node = (M).slots[slot_no];\
     while (node != NULL) {\
         if (CMP(node->key, __key_backup_map)) {\
             break;\
@@ -73,6 +73,19 @@
         node = (typeof(node)) (node->next);\
     }\
     if (node == NULL) Vval = (M).nil;\
+}
+
+#define HASH_MAP_TRAVERSE(M, K, V, Kval, Vval, Hval, OP) {\
+    for (uint_t _i = 0; _i < (M).size; _i++) {\
+        typeof((M).slots[_i]) node = (M).slots[_i];\
+        Hval = _i;\
+        while (node != NULL) {\
+            Kval = node->key;\
+            Vval = node->value;\
+            OP\
+            node = (typeof(node)) (node->next);\
+        }\
+    }\
 }
 
 #define HASH_MAP_FREE(M) {\

@@ -2,22 +2,35 @@
 
 #include <string.h>
 
+symbol_tbl_t *get_symbol_table(ast_node_t *scope) {
+    switch (scope->node_type) {
+    case AST_STMT_COMPOUND:
+        return &(((ast_stmt_compound_t*) scope)->symbol_tbl);
+    case AST_ROOT:
+        return &(((ast_root_t*) scope)->symbol_tbl);
+    case AST_FUNC_IMPL:
+        return &(((ast_function_impl_t*) scope)->symbol_tbl);
+    case AST_DECL_DRCT_FN:
+        return &(((ast_decl_direct_function_t*) scope)->symbol_tbl);
+    default:
+        return NULL;
+    }
+}
+
 symbol_t *get_symbol(context_t *ctx, str name) {
-    const ast_node_t *scope = ctx->cur_scope;
+    ast_node_t *scope = ctx->cur_scope;
     while (scope != NULL) {
-        const symbol_tbl_t *symbol_tbl;
-        if (scope->node_type == AST_STMT_COMPOUND) {
-            symbol_tbl = &(((const ast_stmt_compound_t*) scope)->symbol_tbl);
-        } else if (scope->node_type == AST_ROOT) {
-            symbol_tbl = &(((const ast_root_t*) scope)->symbol_tbl);
-        } else if (scope->node_type == AST_FUNC_IMPL) {
-            symbol_tbl = &(((const ast_function_impl_t*) scope)->symbol_tbl);
-        } else if (scope->node_type == AST_DECL_DRCT_FN) {
-            symbol_tbl = &(((const ast_decl_direct_function_t*) scope)->symbol_tbl);
+        const symbol_tbl_t *symbol_tbl = get_symbol_table(scope);
+        if (symbol_tbl == NULL) {
+            scope = scope->parent;
+            continue;
         }
 
+        HASH_MAP_TRAVERSE(*symbol_tbl, str, symbol_t *, str n, symbol_t *s, uint_t h, {
+            debug("%s @ %d ==> Symbol [ %d ]\n", n, h, s->type);
+        })
         symbol_t *symbol;
-        HASH_MAP_GET(*symbol_tbl, name, symbol, str, symbol_t*, strcmp);
+        HASH_MAP_GET(*symbol_tbl, name, symbol, str, symbol_t*, str_equal);
         if (scope->node_type == AST_ROOT || (symbol->type & SYM_NOTEXIST) != 0) {
             return symbol;
         }
@@ -27,6 +40,44 @@ symbol_t *get_symbol(context_t *ctx, str name) {
 
     fatal("We've set a placeholder on ROOT so it should be impossible!\n");
     return NULL;
+}
+
+void register_symbol(context_t *ctx, symbol_t *symb) {
+    symbol_tbl_t *symbol_tbl = get_symbol_table(ctx->cur_scope);
+    HASH_MAP_PUT(*symbol_tbl, symb->name, symb, str, symbol_t*, str_equal)
+}
+
+symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *decl) {
+    symbol_t *symb = (symbol_t*) malloc(sizeof(symbol_t));
+    symb->decl = decl;
+    symb->name = name;
+    switch (decl->node_type) {
+    case AST_DECL_DRCT_VAR:
+        const ast_decl_direct_variable_t *var_decl = (const ast_decl_direct_variable_t*) decl;
+        symb->immutable = var_decl->decl_type->immutable;
+        symb->type = SYM_VARIABLE;
+        break;
+    case AST_DECL_DRCT_FN:
+        const ast_decl_direct_function_t *fn_decl = (const ast_decl_direct_function_t*) decl;
+        symb->immutable = true;
+        symb->type = SYM_FUNCTION;
+        break;
+    default:
+        fatal("No way! It should never happen!\n");
+    }
+
+    register_symbol(ctx, symb);
+    return symb;
+}
+
+void register_label(context_t *ctx, str name) {
+    symbol_t *symb = (symbol_t*) malloc(sizeof(symbol_t));
+    symb->decl = NULL;
+    symb->name = name;
+    symb->immutable = true;
+    symb->type = SYM_LABEL;
+    register_symbol(ctx, symb);
+    return symb;
 }
 
 symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Null]", .address = 0 };

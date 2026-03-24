@@ -34,9 +34,7 @@ typedef enum ast_node_type {
     AST_STMT_LABELED,
     AST_DECL = 0x04000,
     AST_DECL_DRCT_FN,
-    AST_DECL_DRCT_PARAM,
     AST_DECL_DRCT_VAR,
-    AST_DECL_DRCT_ARRAY,
     AST_EXPR = 0x08000,
     AST_EXPR_CALL,
     AST_EXPR_SYMBOL,
@@ -85,8 +83,8 @@ typedef struct ast_typename_ptr {
     const ast_typename_t *underlying_type;
 } ast_typename_ptr_t;
 
-typedef struct ast_decl_direct_param ast_decl_direct_param_t;
-typedef ARRAY_LIST_TYPE(const ast_decl_direct_param_t *) param_list_t;
+typedef struct ast_decl_direct_variable ast_decl_direct_variable_t;
+typedef ARRAY_LIST_TYPE(const ast_decl_direct_variable_t *) param_list_t;
 
 typedef struct ast_typename_funct {
     AST_TYPENAME_NODE_SHARED_FIELDS
@@ -223,7 +221,9 @@ typedef struct ast_expr_assign {
 // *********** Declarations ***********
 
 #define AST_DECL_SHARED_FIELDS \
-    AST_NODE_SHARED_FIELDS
+    AST_NODE_SHARED_FIELDS\
+    const symbol_t *decl_name;\
+    const ast_typename_t *decl_type;
 
 typedef struct ast_decl {
     AST_DECL_SHARED_FIELDS
@@ -240,31 +240,16 @@ typedef enum decl_specifier {
 
 typedef struct ast_decl_direct_function {
     AST_DECL_SHARED_FIELDS
-    const ast_typename_funct_t *func_type;
-    const symbol_t *func_name;
     const ast_expr_t *initializer;
     bool inline_func;
     symbol_tbl_t symbol_tbl;
 } ast_decl_direct_function_t;
 
-typedef struct ast_decl_direct_param {
-    AST_DECL_SHARED_FIELDS
-    const ast_typename_t *var_type;
-    const symbol_t *var_name;
-} ast_decl_direct_param_t;
-
 typedef struct ast_decl_direct_variable {
     AST_DECL_SHARED_FIELDS
-    const ast_typename_t *var_type;
-    const symbol_t *var_name;
     const ast_expr_t *initializer;
     bool register_var;
 } ast_decl_direct_variable_t;
-
-typedef struct ast_decl_array {
-    AST_DECL_SHARED_FIELDS
-    const ast_expr_t *array_length;
-} ast_decl_array_t;
 
 // *********** Statements ***********
 
@@ -285,9 +270,11 @@ typedef struct ast_stmt_expr {
     const ast_expr_t *expr;
 } ast_stmt_expr_t;
 
+typedef ARRAY_LIST_TYPE(const ast_stmt_t *) stmt_list_t;
+
 typedef struct ast_stmt_compound {
     AST_NODE_SHARED_FIELDS
-    ARRAY_LIST_TYPE(const ast_stmt_t *) statements;
+    stmt_list_t statements;
     const uint_t entry_address;
     const uint_t end_address;
     symbol_tbl_t symbol_tbl;

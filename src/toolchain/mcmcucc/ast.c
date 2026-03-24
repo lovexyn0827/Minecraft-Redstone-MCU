@@ -1,6 +1,7 @@
 #include "ast.h"
 
 #include "common.h"
+#include "context.h"
 
 #include <stdio.h>
 
@@ -30,7 +31,7 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         const ast_typename_funct_t *fn_type_node = (const ast_typename_funct_t*) node;
         debug("%08x: FN_TYPE_%08x\n", node, node);
         dump_ast((const ast_node_t*) fn_type_node->return_type, node, "Ret");
-        ARRAY_LIST_TRAVERSE(fn_type_node->param_type, const ast_decl_direct_param_t*, param, param_idx, {
+        ARRAY_LIST_TRAVERSE(fn_type_node->param_type, const ast_decl_direct_variable_t*, param, param_idx, {
             char_t arg_idx_buf[16];
             sprintf(arg_idx_buf, "Param_%d", param_idx);
             dump_ast((const ast_node_t*) param, node, arg_idx_buf);
@@ -39,8 +40,14 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_STMT:
         break;
     case AST_STMT_DECL:
+        const ast_stmt_decl_t *decl_node = (const ast_stmt_decl_t*) node;
+        debug("%08x: DECL_%08x\n", node, node);
+        dump_ast((const ast_node_t*) decl_node->decl, node, "Decl");
         break;
     case AST_STMT_EXPR:
+        const ast_stmt_expr_t *expr_node = (const ast_stmt_expr_t*) node;
+        debug("%08x: EXPR_%08x\n", node, node);
+        dump_ast((const ast_node_t*) expr_node->expr, node, "Expr");
         break;
     case AST_STMT_IF:
         break;
@@ -75,12 +82,24 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_DECL:
         break;
     case AST_DECL_DRCT_FN:
-        break;
-    case AST_DECL_DRCT_PARAM:
+        const ast_decl_direct_function_t *fn_decl_node = (const ast_decl_direct_function_t*) node;
+        debug("%08x: DECL_FN_%08x_%s_%s\n", node, node,
+              fn_decl_node->decl_name->name, fn_decl_node->inline_func ? "L" : "");
+        dump_ast((ast_node_t*) fn_decl_node->decl_type, node, "Type");
+        if (fn_decl_node->initializer != NULL) {
+            dump_ast((ast_node_t*) fn_decl_node->initializer, node, "Init");
+        }
+
         break;
     case AST_DECL_DRCT_VAR:
-        break;
-    case AST_DECL_DRCT_ARRAY:
+        const ast_decl_direct_variable_t *var_decl_node = (const ast_decl_direct_variable_t*) node;
+        debug("%08x: DECL_VAR_%08x_%s_%s\n", node, node,
+              var_decl_node->decl_name->name, var_decl_node->register_var ? "R" : "");
+        dump_ast((ast_node_t*) var_decl_node->decl_type, node, "Type");
+        if (var_decl_node->initializer != NULL) {
+            dump_ast((ast_node_t*) var_decl_node->initializer, node, "Init");
+        }
+
         break;
     case AST_EXPR:
         break;
