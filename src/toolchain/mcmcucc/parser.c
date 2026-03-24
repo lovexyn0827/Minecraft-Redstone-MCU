@@ -72,6 +72,8 @@ void unread_prev(read_head_t *ptr) {
     if (ptr->cur_pos > 0) {
         ptr->cur_pos--;
     }
+
+    debug("Unread token %s\n", peek_current(ptr)->token);
 }
 
 void skip_current(read_head_t *ptr) {
@@ -302,13 +304,13 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         getinc_node->constant = false;
         getinc_node->lvalue = false;
         getinc_node->opnd = left_hand;
+        left_hand->parent = (ast_node_t*) getinc_node;
+        *dest = (ast_expr_t*) getinc_node;
         if (!left_hand->lvalue) {
             error_on_token(postfix_start, "Operand of ++ or -- must be lvalue!");
             return true;
         }
 
-        left_hand->parent = (ast_node_t*) getinc_node;
-        *dest = (ast_expr_t*) getinc_node;
         return true;
     default:
         // Unexpected
@@ -343,12 +345,12 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         getinc_node->constant = false;
         getinc_node->lvalue = false;
         parse_unary_expr(ctx, (ast_node_t*) getinc_node, (ast_expr_t**) &(getinc_node->opnd));
+        *dest = (ast_expr_t*) getinc_node;
         if (!getinc_node->opnd->lvalue) {
             error_on_token(prefix, "Operand of ++ or -- must be lvalue!");
             return true;
         }
 
-        *dest = (ast_expr_t*) getinc_node;
         return true;
     case TOKEN_PUNCT_AND:
     case TOKEN_PUNCT_STAR:
@@ -913,7 +915,7 @@ bool parse_pointer_decl(context_t *ctx, type_derivation_pointer_t **dest) {
 
     type_derivation_pointer_t *ptr_derivation = (type_derivation_pointer_t*) malloc(sizeof(type_derivation_pointer_t));
     ptr_derivation->type = DERIVATION_POINTER;
-    while (peek_current(ctx->ptr)->type != TOKEN_PUNCT_STAR) {
+    while (peek_current(ctx->ptr)->type == TOKEN_PUNCT_STAR) {
         skip_current(ctx->ptr);
         if (peek_current(ctx->ptr)->type == TOKEN_KW_CONST) {
             ARRAY_LIST_APPEND(ptr_derivation->constant, true, bool);
@@ -930,6 +932,7 @@ bool parse_pointer_decl(context_t *ctx, type_derivation_pointer_t **dest) {
 typedef ARRAY_LIST_TYPE(const type_derivation_t*) type_derivation_stack_t;
 
 bool parse_abst_declarator_internal(context_t *ctx, type_derivation_stack_t *derivations) {
+    debug(" ==> Parsing: abst-declarator\n");
     type_derivation_pointer_t *ptr_derivation;
     bool has_ptr_decl;
     has_ptr_decl = parse_pointer_decl(ctx, &ptr_derivation);
@@ -978,7 +981,11 @@ bool parse_abst_declarator_internal(context_t *ctx, type_derivation_stack_t *der
 bool parse_abst_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, ast_typename_t **dest) {
     mark_current(ctx->ptr);
     type_derivation_stack_t derivations;
-    parse_abst_declarator_internal(ctx, &derivations);
+    ARRAY_LIST_INIT(const type_derivation_t*, derivations)
+    if (!parse_abst_declarator_internal(ctx, &derivations)) {
+        return false;
+    }
+
     while (!ARRAY_LIST_EMPTY_INLINE(derivations)) {
         const type_derivation_t *derivation;
         ARRAY_LIST_REMOVE_TAIL(derivations, derivation)
@@ -1001,7 +1008,7 @@ bool parse_abst_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *t
                 type_in->parent = (ast_node_t*) ptr_node;
                 ptr_node->immutable = constant;
                 ptr_node->underlying_type = type_in;
-                type_in = (ast_typename_t*) ptr_derv;
+                type_in = (ast_typename_t*) ptr_node;
             })
             break;
         default:
@@ -1011,6 +1018,7 @@ bool parse_abst_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *t
     }
 
     type_in->parent = parent;
+    *dest = (ast_typename_t*) type_in;
     return true;
 }
 
@@ -1026,6 +1034,8 @@ void type_spec_to_ast_typename_node(uint_t spec, ast_node_t *parent, ast_typenam
     } else if (spec & DECL_SPEC_VOID) {
         new_node->type_name = ETYPE_VOID;
     }
+
+    *dest = (ast_typename_t*) new_node;
 }
 
 // param-decl		:= decl-spec declarator | type-name
@@ -1087,10 +1097,111 @@ bool parse_param_list(context_t *ctx, param_list_t *dest) {
 bool parse_typename(context_t *ctx, ast_node_t *parent, ast_typename_t **dest) {
     debug(" ==> Parsing: type-name\n");
     uint_t decl_spec;
-    parse_decl_specifier(ctx, &decl_spec);
+    if (!parse_decl_specifier(ctx, &decl_spec)) {
+        return false;
+    }
+
     ast_typename_t *decl_type;
     type_spec_to_ast_typename_node(decl_spec, NULL, &decl_type);
+    *dest = decl_type;
     parse_abst_declarator(ctx, parent, decl_type, dest);
+    return true;
+}
+
+// declarator		:= pointer? drct-declarator
+// drct-declarator	:= identifier
+// 					| ( declarator )
+// 					| drct-declarator ( param-list? )
+
+// We shall follow the same scheme we've applied to parse abst-declarators
+
+bool parse_declarator_internal(context_t *ctx, type_derivation_stack_t *derivations, const token_t **ident) {
+    type_derivation_pointer_t *ptr_derivation;
+    bool has_ptr_decl;
+    has_ptr_decl = parse_pointer_decl(ctx, &ptr_derivation);
+    if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
+        // ( A ) part
+        skip_current(ctx->ptr);
+        if (!parse_declarator_internal(ctx, derivations, ident)) {
+            if (has_ptr_decl) {
+                return true;
+            } else {
+                return_marked(ctx->ptr);
+                return false;
+            }
+        }
+
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+    } else {
+        // A := P and an identifier follows
+        ARRAY_LIST_APPEND(*derivations, ((type_derivation_t*) ptr_derivation), type_derivation_t*);
+        if (peek_current(ctx->ptr)->type == TOKEN_IDENTIFIER) {
+            *ident = read_current(ctx->ptr);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_L_P) {
+        // A := P? ( A ) ( Q ) and we are parsing ( Q ) since P? ( A ) has already been processed
+        type_derivation_function_t *func = (type_derivation_function_t*) malloc(sizeof(type_derivation_function_t));
+        func->type = DERIVATION_FUNCTION;
+        mark_current(ctx->ptr);
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
+        parse_param_list(ctx, &(func->params));
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+    } else {
+        return false;
+    }
+
+    if (has_ptr_decl) {
+        ARRAY_LIST_APPEND(*derivations, ((type_derivation_t*) ptr_derivation), type_derivation_t*);
+    }
+
+    return true;
+}
+
+bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_in, ast_decl_t **dest) {
+    mark_current(ctx->ptr);
+    type_derivation_stack_t derivations;
+    const token_t *ident_token;
+    if (!parse_declarator_internal(ctx, &derivations, &ident_token)) {
+        return false;
+    }
+
+    while (!ARRAY_LIST_EMPTY_INLINE(derivations)) {
+        const type_derivation_t *derivation;
+        ARRAY_LIST_REMOVE_TAIL(derivations, derivation)
+        switch (derivation->type) {
+        case DERIVATION_FUNCTION:
+            const type_derivation_function_t *fn_derv = (type_derivation_function_t*) derivation;
+            ast_typename_funct_t *fn_node = (ast_typename_funct_t*) malloc(sizeof(ast_typename_funct_t));
+            fn_node->node_type = AST_TYPE_FUNCT;
+            type_in->parent = (ast_node_t*) fn_node;
+            fn_node->return_type = type_in;
+            fn_node->immutable = false;
+            memcpy(&(fn_node->param_type), &(fn_derv->params), sizeof(param_list_t));
+            type_in = (ast_typename_t*) fn_node;
+            break;
+        case DERIVATION_POINTER:
+            const type_derivation_pointer_t *ptr_derv = (type_derivation_pointer_t*) derivation;
+            ARRAY_LIST_TRAVERSE(ptr_derv->constant, bool, constant, i, {
+                ast_typename_ptr_t *ptr_node = (ast_typename_ptr_t*) malloc(sizeof(ast_typename_ptr_t));
+                ptr_node->node_type = AST_TYPE_PTR;
+                type_in->parent = (ast_node_t*) ptr_node;
+                ptr_node->immutable = constant;
+                ptr_node->underlying_type = type_in;
+                type_in = (ast_typename_t*) ptr_derv;
+            })
+            break;
+        default:
+            fatal_on_token(peek_current(ctx->ptr), "Unrecognized type derivation: %d\n", derivation->type);
+            return false;
+        }
+    }
+
+    type_in->parent = parent;
     return true;
 }
 

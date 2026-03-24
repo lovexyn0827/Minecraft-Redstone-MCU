@@ -154,7 +154,7 @@ typedef struct ast_expr_unary {
 
 typedef struct ast_expr_cast {
     AST_EXPR_NODE_SHARED_FIELDS
-    const ast_typename_t cast_to;
+    const ast_typename_t *cast_to;
     const ast_expr_t *opnd;
 } ast_expr_cast_t;
 

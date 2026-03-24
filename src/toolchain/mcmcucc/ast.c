@@ -13,10 +13,28 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_TYPENAME:
         break;
     case AST_TYPE_PRIM:
+        const ast_typename_prim_t *prim_type_node = (const ast_typename_prim_t*) node;
+        debug("%08x: PRIM_TYPE_%08x_%d\n", node, node, prim_type_node->type_name);
         break;
     case AST_TYPE_PTR:
+        const ast_typename_ptr_t *ptr_type_node = (const ast_typename_ptr_t*) node;
+        if (ptr_type_node->immutable) {
+            debug("%08x: CONSTPTR_%08x\n", node, node);
+        } else {
+            debug("%08x: MUTPTR_%08x\n", node, node);
+        }
+
+        dump_ast((const ast_node_t*) ptr_type_node->underlying_type, node, "Underlying");
         break;
     case AST_TYPE_FUNCT:
+        const ast_typename_funct_t *fn_type_node = (const ast_typename_funct_t*) node;
+        debug("%08x: FN_TYPE_%08x\n", node, node);
+        dump_ast((const ast_node_t*) fn_type_node->return_type, node, "Ret");
+        ARRAY_LIST_TRAVERSE(fn_type_node->param_type, const ast_decl_direct_param_t*, param, param_idx, {
+            char_t arg_idx_buf[16];
+            sprintf(arg_idx_buf, "Param_%d", param_idx);
+            dump_ast((const ast_node_t*) param, node, arg_idx_buf);
+        })
         break;
     case AST_STMT:
         break;
@@ -83,10 +101,14 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         debug("%08x: EXPR_CONST_%08x_%d\n", node, node, const_node->value);
         break;
     case AST_EXPR_UNARY:
+        const ast_expr_unary_t *unary_node = (const ast_expr_unary_t*) node;
+        debug("%08x: EXPR_UNARY_%08x_%d\n", node, node, unary_node->op);
+        dump_ast((const ast_node_t*) unary_node->opnd, node, "Opnd");
         break;
     case AST_EXPR_CAST:
         const ast_expr_cast_t *cast_node = (const ast_expr_cast_t*) node;
         debug("%08x: EXPR_CAST_%08x\n", node, node);
+        dump_ast((const ast_node_t*) cast_node->cast_to, node, "Type");
         dump_ast((const ast_node_t*) cast_node->opnd, node, "Opnd");
         break;
     case AST_EXPR_BINARY:
@@ -104,5 +126,9 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_EXPR_EXPRSZ:
         break;
     case AST_FUNC_IMPL:
+        break;
+    default:
+        error("Unrecognized node type: %d\n", node->node_type);
+        break;
     }
 }
