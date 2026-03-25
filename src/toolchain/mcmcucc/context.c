@@ -18,9 +18,10 @@ symbol_tbl_t *get_symbol_table(ast_node_t *scope) {
 }
 
 symbol_t *get_symbol(context_t *ctx, str name) {
-    ast_node_t *scope = ctx->cur_scope;
+    debug("Finding symbol %s\n", name);
+    const ast_node_t *scope = ctx->cur_scope;
     while (scope != NULL) {
-        const symbol_tbl_t *symbol_tbl = get_symbol_table(scope);
+        const symbol_tbl_t *symbol_tbl = get_symbol_table((ast_node_t*) scope);
         if (symbol_tbl == NULL) {
             scope = scope->parent;
             continue;
@@ -31,7 +32,7 @@ symbol_t *get_symbol(context_t *ctx, str name) {
         })
         symbol_t *symbol;
         HASH_MAP_GET(*symbol_tbl, name, symbol, str, symbol_t*, str_equal);
-        if (scope->node_type == AST_ROOT || (symbol->type & SYM_NOTEXIST) != 0) {
+        if (scope->node_type == AST_ROOT || symbol->type != SYM_NOTEXIST) {
             return symbol;
         }
 
@@ -59,7 +60,7 @@ symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *d
         break;
     case AST_DECL_DRCT_FN:
         const ast_decl_direct_function_t *fn_decl = (const ast_decl_direct_function_t*) decl;
-        symb->immutable = true;
+        symb->immutable = fn_decl->decl_type->immutable;
         symb->type = SYM_FUNCTION;
         break;
     default:
@@ -70,7 +71,7 @@ symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *d
     return symb;
 }
 
-void register_label(context_t *ctx, str name) {
+symbol_t *register_label(context_t *ctx, str name) {
     symbol_t *symb = (symbol_t*) malloc(sizeof(symbol_t));
     symb->decl = NULL;
     symb->name = name;

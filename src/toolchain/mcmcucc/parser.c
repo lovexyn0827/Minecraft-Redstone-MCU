@@ -1322,15 +1322,87 @@ bool parse_expr_stmt(context_t *ctx, ast_node_t *parent, stmt_list_t *dest) {
     }
 }
 
+// comp-stmt		:= { block-item-list? }
+
+bool parse_stmt(context_t *ctx, ast_node_t *parent, stmt_list_t *dest);
+
+bool parse_comp_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_compound_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_PUNCT_L_CP) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_CP);
+    ast_stmt_compound_t *comp_stmt = (ast_stmt_compound_t*) malloc(sizeof(ast_stmt_compound_t));
+    comp_stmt->node_type = AST_STMT_COMPOUND;
+    comp_stmt->parent = parent;
+    HASH_MAP_INIT(str, symbol_t*, comp_stmt->symbol_tbl, 64, hash_str, &NIL_SYMBOL)
+    ARRAY_LIST_INIT(ast_stmt_t*, comp_stmt->statements)
+    ast_node_t *prev_scope = ctx->cur_scope;
+    ctx->cur_scope = (ast_node_t*) comp_stmt;
+    do {
+        parse_stmt(ctx, (ast_node_t*) comp_stmt, &(comp_stmt->statements));
+    } while (peek_current(ctx->ptr)->type != TOKEN_PUNCT_R_CP);
+    ctx->cur_scope = prev_scope;
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_CP);
+    *dest = comp_stmt;
+    return true;
+}
+
 // stmt			:= labeled-stmt
-// 					| comp-stmt
-// 					| expr-stmt
-// 					| select-stmt
-// 					| iter-stmt
-// 					| jump-stmt
+//					| comp-stmt
+//					| decl-stmt
+//					| expr-stmt
+//					| if-stmt
+//					| switch-stmt
+//					| for-stmt
+//					| do-stmt
+//					| while-stmt
+//					| goto-stmt
+//					| continue-stmt
+//					| break-stmt
+//					| return-stmt
 
 bool parse_stmt(context_t *ctx, ast_node_t *parent, stmt_list_t *dest) {
-    return true;
+    switch (peek_current(ctx->ptr)->type) {
+    case TOKEN_PUNCT_L_CP:
+        ast_stmt_compound_t *comp_stmt;
+        if (!parse_comp_stmt(ctx, parent, &comp_stmt)) {
+            return false;
+        }
+
+        ARRAY_LIST_APPEND(*dest, (ast_stmt_t*) comp_stmt, ast_stmt_t*)
+        return true;
+    case TOKEN_KW_IF:
+        break;  // TODO
+    case TOKEN_KW_SWITCH:
+        break;  // TODO
+    case TOKEN_KW_FOR:
+        break;  // TODO
+    case TOKEN_KW_DO:
+        break;  // TODO
+    case TOKEN_KW_WHILE:
+        break;  // TODO
+    case TOKEN_KW_GOTO:
+        break;  // TODO
+    case TOKEN_KW_CONTINUE:
+        break;  // TODO
+    case TOKEN_KW_BREAK:
+        break;  // TODO
+    case TOKEN_KW_RETURN:
+        break;  // TODO
+    case TOKEN_KW_VOID:
+    case TOKEN_KW_UINT8_T:
+    case TOKEN_KW_INT8_T:
+    case TOKEN_KW_CONST:
+    case TOKEN_KW_INLINE:
+    case TOKEN_KW_REGISTER:
+        return parse_decl_stmt(ctx, parent, dest);
+    default:
+        if (peek_current_plus_n(ctx->ptr, 1)->type == TOKEN_PUNCT_SEMICOLON) {
+            break;  // TODO
+        } else {
+            return parse_expr_stmt(ctx, parent, dest);
+        }
+    }
+
+    return false;
 }
 
 // *********** Main Procedure ***********
@@ -1348,10 +1420,7 @@ void parse(context_t *ctx) {
     // dump_ast((ast_node_t*) expr, NULL, "Root");
     stmt_list_t stmts;
     ARRAY_LIST_INIT(const ast_stmt_t*, stmts)
-    parse_decl_stmt(ctx, NULL, &stmts);
-    parse_decl_stmt(ctx, NULL, &stmts);
-    parse_decl_stmt(ctx, NULL, &stmts);
-    parse_expr_stmt(ctx, NULL, &stmts);
+    parse_stmt(ctx, NULL, &stmts);
     ARRAY_LIST_TRAVERSE(stmts, const ast_stmt_t*, stmt, i, {
         dump_ast((ast_node_t*) stmt, NULL, "");
     })

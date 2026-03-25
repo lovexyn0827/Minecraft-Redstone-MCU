@@ -72,6 +72,14 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_STMT_RETURN:
         break;
     case AST_STMT_COMPOUND:
+        const ast_stmt_compound_t *comp_stmt = (const ast_stmt_compound_t*) node;
+        debug("%08x: STMT_COMP_%08x\n", node, node);
+        ARRAY_LIST_TRAVERSE(comp_stmt->statements, const ast_stmt_t*, stmt, stmt_idx, {
+            char_t arg_idx_buf[16];
+            sprintf(arg_idx_buf, "Stmt_%d", stmt_idx);
+            dump_ast((const ast_node_t*) stmt, node, arg_idx_buf);
+        })
+        break;
         break;
     case AST_STMT_CASE:
         break;
