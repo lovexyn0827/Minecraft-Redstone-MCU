@@ -42,7 +42,11 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_STMT_DECL:
         const ast_stmt_decl_t *decl_node = (const ast_stmt_decl_t*) node;
         debug("%08x: DECL_%08x\n", node, node);
-        dump_ast((const ast_node_t*) decl_node->decl, node, "Decl");
+        ARRAY_LIST_TRAVERSE(decl_node->declarators, const ast_decl_t*, decl, decl_idx, {
+            char_t decl_idx_buf[16];
+            sprintf(decl_idx_buf, "Decl_%d", decl_idx);
+            dump_ast((const ast_node_t*) decl, node, decl_idx_buf);
+        })
         break;
     case AST_STMT_EXPR:
         const ast_stmt_expr_t *expr_node = (const ast_stmt_expr_t*) node;
@@ -50,16 +54,45 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         dump_ast((const ast_node_t*) expr_node->expr, node, "Expr");
         break;
     case AST_STMT_EMPTY:
+        debug("%08x: STMT_EMPTY_%08x\n", node, node);
         break;
     case AST_STMT_IF:
+        const ast_stmt_if_t *if_stmt = (const ast_stmt_if_t*) node;
+        debug("%08x: IF_%08x_%s\n", node, node, if_stmt->likely_true ? "L" : "U");
+        dump_ast((ast_node_t*) if_stmt->cond, node, "Cond");
+        dump_ast((ast_node_t*) if_stmt->if_true, node, "IfTrue");
+        if (if_stmt->if_false != NULL) {
+            dump_ast((ast_node_t*) if_stmt->if_false, node, "IfFalse");
+        }
+
         break;
     case AST_STMT_FOR:
+        const ast_stmt_for_t *for_stmt = (const ast_stmt_for_t*) node;
+        debug("%08x: FOR_%08x_%s\n", node, node, for_stmt->likely_true ? "L" : "U");
+        dump_ast((ast_node_t*) for_stmt->init, node, "Init");
+        dump_ast((ast_node_t*) for_stmt->cond, node, "Cond");
+        dump_ast((ast_node_t*) for_stmt->step, node, "Step");
+        dump_ast((ast_node_t*) for_stmt->body, node, "Body");
         break;
     case AST_STMT_FORDECL:
+        const ast_stmt_fordecl_t *fordecl_stmt = (const ast_stmt_fordecl_t*) node;
+        debug("%08x: FOR_%08x_%s\n", node, node, fordecl_stmt->likely_true ? "L" : "U");
+        dump_ast((ast_node_t*) fordecl_stmt->init, node, "Init");
+        dump_ast((ast_node_t*) fordecl_stmt->cond, node, "Cond");
+        dump_ast((ast_node_t*) fordecl_stmt->step, node, "Step");
+        dump_ast((ast_node_t*) fordecl_stmt->body, node, "Body");
         break;
     case AST_STMT_WHILE:
+        const ast_stmt_while_t *while_stmt = (const ast_stmt_while_t*) node;
+        debug("%08x: WHILE_%08x_%s\n", node, node, while_stmt->likely_true ? "L" : "U");
+        dump_ast((ast_node_t*) while_stmt->cond, node, "Cond");
+        dump_ast((ast_node_t*) while_stmt->body, node, "Body");
         break;
     case AST_STMT_DO:
+        const ast_stmt_do_t *do_stmt = (const ast_stmt_do_t*) node;
+        debug("%08x: DO_%08x_%s\n", node, node, do_stmt->likely_true ? "L" : "U");
+        dump_ast((ast_node_t*) do_stmt->cond, node, "Cond");
+        dump_ast((ast_node_t*) do_stmt->body, node, "Body");
         break;
     case AST_STMT_SWITCH:
         break;

@@ -262,7 +262,7 @@ typedef struct ast_stmt {
 
 typedef struct ast_stmt_decl {
     AST_NODE_SHARED_FIELDS
-    const ast_decl_t *decl;
+    ARRAY_LIST_TYPE(const ast_decl_t*) declarators;
 } ast_stmt_decl_t;
 
 typedef struct ast_stmt_expr {
@@ -303,7 +303,7 @@ typedef struct ast_stmt_for {
 
 typedef struct ast_stmt_fordecl {
     AST_STMT_NODE_SHARED_FIELDS
-    const ast_decl_t *init;
+    const ast_stmt_decl_t *init;
     const ast_expr_t *cond;
     const ast_expr_t *step;
     const ast_stmt_t *body;
@@ -342,27 +342,23 @@ typedef struct ast_stmt_switch {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_expr_t *switch_on;
     const ast_stmt_t *body;
-    HASH_MAP_TYPE(const ast_expr_t*, const ast_stmt_case_t*) cases;
+    HASH_MAP_TYPE(uint_t, const ast_stmt_case_t*) cases;
     const ast_stmt_t *default_case;
-    bool likely_true;
 } ast_stmt_switch_t;
 
 typedef struct ast_stmt_goto {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_expr_t *target;
-    bool likely_true;
 } ast_stmt_goto_t;
 
 typedef struct ast_stmt_break {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_stmt_t *from;
-    bool likely_true;
 } ast_stmt_break_t;
 
 typedef struct ast_stmt_continue {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_stmt_t *to;
-    bool likely_true;
 } ast_stmt_continue_t;
 
 typedef struct ast_stmt_return {

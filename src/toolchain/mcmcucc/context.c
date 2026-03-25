@@ -12,6 +12,8 @@ symbol_tbl_t *get_symbol_table(ast_node_t *scope) {
         return &(((ast_function_impl_t*) scope)->symbol_tbl);
     case AST_DECL_DRCT_FN:
         return &(((ast_decl_direct_function_t*) scope)->symbol_tbl);
+    case AST_STMT_FORDECL:
+        return &(((ast_stmt_fordecl_t*) scope)->symbol_tbl);
     default:
         return NULL;
     }
@@ -45,6 +47,10 @@ symbol_t *get_symbol(context_t *ctx, str name) {
 
 void register_symbol(context_t *ctx, symbol_t *symb) {
     symbol_tbl_t *symbol_tbl = get_symbol_table(ctx->cur_scope);
+    if (symbol_tbl == NULL) {
+        fatal("This should never happen as we are ensuring cur_scope to denote a vaild scope node!\n");
+    }
+
     HASH_MAP_PUT(*symbol_tbl, symb->name, symb, str, symbol_t*, str_equal)
 }
 
@@ -72,12 +78,16 @@ symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *d
 }
 
 symbol_t *register_label(context_t *ctx, str name) {
+    if (ctx->cur_func == NULL) {
+        return NULL;
+    }
+
     symbol_t *symb = (symbol_t*) malloc(sizeof(symbol_t));
     symb->decl = NULL;
     symb->name = name;
     symb->immutable = true;
     symb->type = SYM_LABEL;
-    register_symbol(ctx, symb);
+    HASH_MAP_PUT(ctx->cur_func->symbol_tbl, name, symb, str, symbol_t*, str_equal)
     return symb;
 }
 
@@ -94,4 +104,5 @@ void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
     ARRAY_LIST_AS_ARRAY(*tokens, ctx->ptr->base);
     ARRAY_LIST_SIZE(*tokens, ctx->ptr->end_pos);
     ctx->cur_scope = (ast_node_t*) &(ctx->ast.root);
+    ctx->cur_func = NULL;
 }

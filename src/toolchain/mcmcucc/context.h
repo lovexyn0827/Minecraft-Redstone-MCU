@@ -32,6 +32,7 @@ typedef struct symbol_t {
 typedef struct context {
     read_head_t *ptr;
     ast_node_t *cur_scope;
+    ast_function_impl_t *cur_func;
     ast_t ast;
 } context_t;
 

@@ -1285,16 +1285,18 @@ bool parse_decl_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
         return false;
     }
 
+    ast_stmt_decl_t *decl_stmt = (ast_stmt_decl_t*) malloc(sizeof(ast_stmt_decl_t));
+    decl_stmt->node_type = AST_STMT_DECL;
+    decl_stmt->parent = parent;
+    ARRAY_LIST_INIT(const ast_decl_t*, decl_stmt->declarators)
     do {
-        ast_stmt_decl_t *decl_stmt = (ast_stmt_decl_t*) malloc(sizeof(ast_stmt_decl_t));
-        decl_stmt->node_type = AST_STMT_DECL;
-        decl_stmt->parent = parent;
         ast_typename_prim_t *decl_type;
         type_spec_to_ast_typename_node(decl_spec, NULL, (ast_typename_t**) &decl_type);
-        parse_declarator(ctx, (ast_node_t*) decl_stmt, (ast_typename_t*) decl_type,
-                         decl_spec, (ast_decl_t**) &(decl_stmt->decl));
-        *dest = (ast_stmt_t*) decl_stmt;
+        ast_decl_t *decl;
+        parse_declarator(ctx, (ast_node_t*) decl_stmt, (ast_typename_t*) decl_type, decl_spec, (ast_decl_t**) &decl);
+        ARRAY_LIST_APPEND(decl_stmt->declarators, decl, ast_decl_t*);
     } while (read_current(ctx->ptr)->type == TOKEN_PUNCT_COMMA);
+    *dest = (ast_stmt_t*) decl_stmt;
     unread_prev(ctx->ptr);
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
     return true;
@@ -1309,6 +1311,7 @@ bool parse_expr_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
         ast_stmt_empty_t *empty_stmt = (ast_stmt_empty_t*) malloc(sizeof(ast_stmt_empty_t));
         empty_stmt->node_type = AST_STMT_EMPTY;
         empty_stmt->parent = parent;
+        *dest = (ast_stmt_t*) empty_stmt;
         return true;
     }
 
@@ -1350,6 +1353,58 @@ bool parse_comp_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
     return true;
 }
 
+// labeled-stmt	:= identifier : stmt
+//					| likelyhood-spec case const-expr : stmt
+//					| likelyhood-spec default : stmt
+
+bool parse_labeled_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_IDENTIFIER) return false;
+    const token_t *lbl_token = read_current(ctx->ptr);
+    symbol_t *lbl_symb = register_label(ctx, lbl_token->token);
+    if (lbl_symb == NULL) {
+        error_on_token(lbl_token, "Labeling outside function definitions is disallowed!\n");
+    }
+
+    if (peek_current(ctx->ptr)->type != TOKEN_PUNCT_COLON) return false;
+    skip_current(ctx->ptr);
+    ast_stmt_labeled_t *labelled_stmt = (ast_stmt_labeled_t*) malloc(sizeof(ast_stmt_labeled_t));
+    labelled_stmt->node_type = AST_STMT_LABELED;
+    labelled_stmt->parent = parent;
+    labelled_stmt->label = lbl_symb;
+    parse_stmt(ctx, (ast_node_t*) labelled_stmt, (ast_stmt_t**) &(labelled_stmt->underlying));
+    *dest = (ast_stmt_t*) labelled_stmt;
+    return true;
+}
+
+bool parse_case_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_DEFAULT) return false;
+    skip_current(ctx->ptr);
+    ast_stmt_case_t *labelled_stmt = (ast_stmt_case_t*) malloc(sizeof(ast_stmt_case_t));
+    ast_expr_t *switch_on;
+    parse_expr(ctx, (ast_node_t*) labelled_stmt, &switch_on);
+    if (peek_current(ctx->ptr)->type != TOKEN_PUNCT_COLON) return false;
+    skip_current(ctx->ptr);
+    labelled_stmt->node_type = AST_STMT_CASE;
+    labelled_stmt->parent = parent;
+    labelled_stmt->likely = likely;
+    labelled_stmt->switch_on = switch_on;
+    *dest = (ast_stmt_t*) labelled_stmt;
+    return true;
+}
+
+bool parse_default_case_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_DEFAULT) return false;
+    skip_current(ctx->ptr);
+    if (peek_current(ctx->ptr)->type != TOKEN_PUNCT_COLON) return false;
+    skip_current(ctx->ptr);
+    ast_stmt_default_t *labelled_stmt = (ast_stmt_default_t*) malloc(sizeof(ast_stmt_default_t));
+    labelled_stmt->node_type = AST_STMT_DEFAULT;
+    labelled_stmt->parent = parent;
+    labelled_stmt->likely = likely;
+    *dest = (ast_stmt_t*) labelled_stmt;
+    return true;
+}
+
 // if-stmt			:= likelyhood-spec? if ( expr ) stmt
 // ifelse-stmt		:= likelyhood-spec? if ( expr ) stmt else stmt
 
@@ -1373,6 +1428,74 @@ bool parse_if_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t *
     return true;
 }
 
+// switch-stmt		:= switch ( expr ) stmt
+
+bool parse_switch_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_SWITCH) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_SWITCH);
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
+    ast_stmt_switch_t *switch_stmt = (ast_stmt_switch_t*) malloc(sizeof(ast_stmt_switch_t));
+    switch_stmt->parent = parent;
+    switch_stmt->node_type = AST_STMT_SWITCH;
+    parse_expr(ctx, (ast_node_t*) switch_stmt, (ast_expr_t**) &(switch_stmt->switch_on));
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+    parse_stmt(ctx, (ast_node_t*) switch_stmt, (ast_stmt_t**) &(switch_stmt->body));
+    return true;
+}
+
+// for-stmt		:= likelyhood-spec? for ( expr? ; expr? ; expr? ) stmt
+//					| likelyhood-spec? for ( decl expr? ; expr? ) stmt
+
+bool parse_for_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_FOR) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_FOR);
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
+    ast_stmt_compound_t temp_scope;
+    temp_scope.node_type = AST_STMT_COMPOUND;
+    temp_scope.parent = ctx->cur_scope;
+    HASH_MAP_INIT(str, symbol_t*, temp_scope.symbol_tbl, 64, hash_str, &NIL_SYMBOL)
+    ast_node_t *prev_scope = ctx->cur_scope;
+    ctx->cur_scope = (ast_node_t*) &temp_scope;
+    ast_stmt_t *decl;
+    mark_current(ctx->ptr);
+    if (parse_decl_stmt(ctx, NULL, &decl)) {
+        pop_mark(ctx->ptr);
+        decl->parent = parent;
+        ast_stmt_fordecl_t *for_stmt = (ast_stmt_fordecl_t*) malloc(sizeof(ast_stmt_fordecl_t));
+        for_stmt->node_type = AST_STMT_FORDECL;
+        for_stmt->likely_true = likely;
+        for_stmt->parent = parent;
+        for_stmt->init = (ast_stmt_decl_t*) decl;
+        memcpy(&(for_stmt->symbol_tbl), &(temp_scope.symbol_tbl), sizeof(symbol_tbl_t));
+        ctx->cur_scope = (ast_node_t*) for_stmt;
+        parse_expr(ctx, (ast_node_t*) for_stmt, (ast_expr_t**) &(for_stmt->cond));
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+        parse_expr(ctx, (ast_node_t*) for_stmt, (ast_expr_t**) &(for_stmt->step));
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+        parse_stmt(ctx, (ast_node_t*) for_stmt, (ast_stmt_t**) &(for_stmt->body));
+        ctx->cur_scope = prev_scope;
+        *dest = (ast_stmt_t*) for_stmt;
+    } else {
+        return_marked(ctx->ptr);
+        HASH_MAP_FREE(temp_scope.symbol_tbl)
+        ctx->cur_scope = prev_scope;
+        ast_stmt_for_t *for_stmt = (ast_stmt_for_t*) malloc(sizeof(ast_stmt_for_t));
+        for_stmt->node_type = AST_STMT_FOR;
+        for_stmt->likely_true = likely;
+        for_stmt->parent = parent;
+        parse_expr(ctx, (ast_node_t*) for_stmt, (ast_expr_t**) &(for_stmt->init));
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+        parse_expr(ctx, (ast_node_t*) for_stmt, (ast_expr_t**) &(for_stmt->cond));
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+        parse_expr(ctx, (ast_node_t*) for_stmt, (ast_expr_t**) &(for_stmt->step));
+        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+        parse_stmt(ctx, (ast_node_t*) for_stmt, (ast_stmt_t**) &(for_stmt->body));
+        *dest = (ast_stmt_t*) for_stmt;
+    }
+
+    return true;
+}
+
 // while-stmt		:= likelyhood-spec? while ( expr ) stmt
 
 bool parse_while_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
@@ -1387,6 +1510,79 @@ bool parse_while_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
     parse_stmt(ctx, (ast_node_t*) while_stmt, (ast_stmt_t**) &(while_stmt->body));
     *dest = (ast_stmt_t*) while_stmt;
+    return true;
+}
+
+// do-stmt			:= do stmt likelyhood-spec? while ( expr ) ;
+
+bool parse_do_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_DO) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_DO);
+    ast_stmt_do_t *do_stmt = (ast_stmt_do_t*) malloc(sizeof(ast_stmt_do_t));
+    do_stmt->node_type = AST_STMT_DO;
+    do_stmt->parent = parent;
+    do_stmt->likely_true = likely;
+    parse_stmt(ctx, (ast_node_t*) do_stmt, (ast_stmt_t**) &(do_stmt->body));
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_WHILE);
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
+    parse_expr(ctx, (ast_node_t*) do_stmt, (ast_expr_t**) &(do_stmt->cond));
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+    *dest = (ast_stmt_t*) do_stmt;
+    return true;
+}
+
+// goto-stmt		:= goto expr ;
+
+bool parse_goto_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_GOTO) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_GOTO);
+    ast_stmt_goto_t *goto_stmt = (ast_stmt_goto_t*) malloc(sizeof(ast_stmt_goto_t));
+    goto_stmt->node_type = AST_STMT_GOTO;
+    goto_stmt->parent = parent;
+    parse_expr(ctx, (ast_node_t*) goto_stmt, (ast_expr_t**) &(goto_stmt->target));
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+    *dest = (ast_stmt_t*) goto_stmt;
+    return true;
+}
+
+// continue-stmt	:= continue ;
+
+bool parse_continue_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_CONTINUE) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_CONTINUE);
+    ast_stmt_continue_t *continue_stmt = (ast_stmt_continue_t*) malloc(sizeof(ast_stmt_continue_t));
+    continue_stmt->node_type = AST_STMT_CONTINUE;
+    continue_stmt->parent = parent;
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+    *dest = (ast_stmt_t*) continue_stmt;
+    return true;
+}
+
+// break-stmt		:= break ;
+
+bool parse_break_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_BREAK) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_BREAK);
+    ast_stmt_break_t *break_stmt = (ast_stmt_break_t*) malloc(sizeof(ast_stmt_break_t));
+    break_stmt->node_type = AST_STMT_BREAK;
+    break_stmt->parent = parent;
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+    *dest = (ast_stmt_t*) break_stmt;
+    return true;
+}
+
+// return-stmt		:= return expr? ;
+
+bool parse_return_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_GOTO) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_GOTO);
+    ast_stmt_return_t *return_stmt = (ast_stmt_return_t*) malloc(sizeof(ast_stmt_return_t));
+    return_stmt->node_type = AST_STMT_RETURN;
+    return_stmt->parent = parent;
+    parse_expr(ctx, (ast_node_t*) return_stmt, (ast_expr_t**) &(return_stmt->ret_value));
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_SEMICOLON);
+    *dest = (ast_stmt_t*) return_stmt;
     return true;
 }
 
@@ -1412,13 +1608,13 @@ bool parse_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
     case TOKEN_KW_IF:
         return parse_if_stmt(ctx, parent, likely, dest);
     case TOKEN_KW_SWITCH:
-        return parse_while_stmt(ctx, parent, likely, dest);
+        return parse_switch_stmt(ctx, parent, dest);
     case TOKEN_KW_FOR:
-        break;  // TODO
+        return parse_for_stmt(ctx, parent, likely, dest);
     case TOKEN_KW_DO:
-        break;  // TODO
+        return parse_do_stmt(ctx, parent, likely, dest);
     case TOKEN_KW_WHILE:
-        break;  // TODO
+        return parse_while_stmt(ctx, parent, likely, dest);
     case TOKEN_KW_GOTO:
         break;  // TODO
     case TOKEN_KW_CONTINUE:
@@ -1434,6 +1630,10 @@ bool parse_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
     case TOKEN_KW_INLINE:
     case TOKEN_KW_REGISTER:
         return parse_decl_stmt(ctx, parent, dest);
+    case TOKEN_KW_CASE:
+        return parse_case_stmt(ctx, parent, likely, dest);
+    case TOKEN_KW_DEFAULT:
+        return parse_default_case_stmt(ctx, parent, likely, dest);
     default:
         if (peek_current_plus_n(ctx->ptr, 1)->type == TOKEN_PUNCT_SEMICOLON) {
             break;  // TODO
@@ -1445,11 +1645,41 @@ bool parse_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
     return false;
 }
 
+// *********** Large Blocks ***********
+
+// func-def		:= decl-spec declarator decl-list? comp-stmt
+
+bool parse_func_impl(context_t *ctx, ast_node_t *parent, ast_function_impl_t **dest) {
+    mark_current(ctx->ptr);
+    uint_t decl_spec;
+    if (!parse_decl_specifier(ctx, &decl_spec)) {
+        return_marked(ctx->ptr);
+        return false;
+    }
+
+    ast_function_impl_t *impl = (ast_function_impl_t*) malloc(sizeof(ast_function_impl_t));
+    impl->parent = parent;
+    impl->node_type = AST_FUNC_IMPL;
+    ast_typename_prim_t *decl_type;
+    type_spec_to_ast_typename_node(decl_spec, NULL, (ast_typename_t**) &decl_type);
+    ast_decl_t *decl;
+    parse_declarator(ctx, (ast_node_t*) impl, (ast_typename_t*) decl_type, decl_spec, (ast_decl_t**) &decl);
+    if (decl->node_type != AST_DECL_DRCT_FN) {
+        return_marked(ctx->ptr);
+        return false;
+    }
+
+    pop_mark(ctx->ptr);
+    impl->decl = (ast_decl_direct_function_t*) decl;
+    memcpy(&(impl->symbol_tbl), &(((ast_decl_direct_function_t*) decl)->symbol_tbl), sizeof(symbol_tbl_t));
+    parse_comp_stmt(ctx, (ast_node_t*) impl, (ast_stmt_t**) &(impl->body));
+    return true;
+}
+
 // *********** Main Procedure ***********
 
 // compile-unit	:= extern-decl | compile-unit
 // extern-decl	:= func-def | decl
-// func-def		:= decl-spec declarator decl-list? comp-stmt
 // decl-list	:= decl | decl-list decl
 
 extern bool verbose;
@@ -1458,4 +1688,7 @@ void parse(context_t *ctx) {
     // ast_expr_t *expr;
     // parse_expr(ctx, NULL, &expr);
     // dump_ast((ast_node_t*) expr, NULL, "Root");
+    ast_stmt_t *stmt;
+    parse_stmt(ctx, NULL, &stmt);
+    dump_ast((ast_node_t*) stmt, NULL, "");
 }
