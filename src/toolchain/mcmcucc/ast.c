@@ -114,6 +114,8 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         })
         break;
     case AST_EXPR_SYMBOL:
+        const ast_expr_symbol_t *sym_node = (const ast_expr_symbol_t*) node;
+        debug("%08x: EXPR_SYMBOL_%s\n", node, node, sym_node->symbol->name);
         break;
     case AST_EXPR_CONST:
         const ast_expr_constant_t *const_node = (const ast_expr_constant_t*) node;
@@ -139,6 +141,10 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_EXPR_COND:
         break;
     case AST_EXPR_ASSIGN:
+        const ast_expr_assign_t *assign_node = (const ast_expr_assign_t*) node;
+        debug("%08x: EXPR_ASSIGN_%08x_%d\n", node, node, assign_node->op);
+        dump_ast((const ast_node_t*) assign_node->dest, node, "Dst");
+        dump_ast((const ast_node_t*) assign_node->src, node, "Src");
         break;
     case AST_EXPR_TYPESZ:
         break;

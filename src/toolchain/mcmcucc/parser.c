@@ -91,14 +91,21 @@ void verify_and_skip_current(read_head_t *ptr, token_type_t type) {
 }
 
 void mark_current(read_head_t *ptr) {
+    debug("Marked at %d\n", ptr->cur_pos);
     ARRAY_LIST_APPEND(ptr->marks, ptr->cur_pos, uint_t)
 }
 
 void return_marked(read_head_t *ptr) {
     uint_t pos;
-    ARRAY_LIST_GET_TAIL(ptr->marks, pos)
+    ARRAY_LIST_REMOVE_TAIL(ptr->marks, pos)
     ptr->cur_pos = pos;
+    debug("Returned to %d\n", pos);
 }
+
+void pop_mark(read_head_t *ptr) {
+    ARRAY_LIST_REMOVE_TAIL(ptr->marks, int i)
+}
+
 
 // *********** Expressions ***********
 
@@ -227,11 +234,17 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
             fatal_on_token(first_token, "Unrecognized symbol type %d\n", symb->type);
         }
     case TOKEN_PUNCT_L_P:
+        mark_current(ctx->ptr);
         skip_current(ctx->ptr);
         // We've skipped '('
-        bool is_expr = parse_expr(ctx, parent, dest);
-        verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
-        return is_expr;
+        if (parse_expr(ctx, parent, dest)) {
+            verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
+            pop_mark(ctx->ptr);
+            return true;
+        } else {
+            return_marked(ctx->ptr);
+            return false;
+        }
     default:
         return false;
     }
@@ -713,12 +726,19 @@ bool parse_cond_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 
 bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     debug(" ==> Parsing: assign-expr\n");
-    ast_expr_t *left_opnd;
-    mark_current(ctx->ptr);
     ast_expr_t *assign_dest;
-    parse_unary_expr(ctx, parent, &assign_dest);
+    mark_current(ctx->ptr);
+    if (!parse_cond_expr(ctx, parent, &assign_dest)) {
+        // An unary-expr is a unary-expr
+        return_marked(ctx->ptr);
+        return false;
+    } else {
+        pop_mark(ctx->ptr);
+        *dest = assign_dest;
+    }
+
     assign_op_t assign_op;
-    const token_t *assign_op_token = read_current(ctx->ptr);
+    const token_t *assign_op_token = peek_current(ctx->ptr);
     switch (assign_op_token->type) {
     case TOKEN_PUNCT_ASSIGN:
         assign_op = AOP_EQ;
@@ -760,14 +780,10 @@ bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         assign_op = AOP_CLR;
         break;
     default:
-        return_marked(ctx->ptr);
-        if (parse_cond_expr(ctx, parent, &left_opnd)) {
-            *dest = left_opnd;
-        }
-
         return true;
     }
 
+    skip_current(ctx->ptr);
     ast_expr_assign_t *assign_node = (ast_expr_assign_t*) malloc(sizeof(ast_expr_assign_t));
     assign_node->node_type = AST_EXPR_ASSIGN;
     assign_node->parent = parent;
@@ -779,6 +795,8 @@ bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     if (!assign_dest->lvalue) {
         error_on_token(assign_op_token, "Destnation must be lvalue!\n");
     }
+
+    *dest = (ast_expr_t*) assign_node;
     return true;
 }
 
@@ -1307,6 +1325,7 @@ void parse(context_t *ctx) {
     // dump_ast((ast_node_t*) expr, NULL, "Root");
     stmt_list_t stmts;
     ARRAY_LIST_INIT(const ast_stmt_t*, stmts)
+    parse_decl_stmt(ctx, NULL, &stmts);
     parse_decl_stmt(ctx, NULL, &stmts);
     parse_expr_stmt(ctx, NULL, &stmts);
     ARRAY_LIST_TRAVERSE(stmts, const ast_stmt_t*, stmt, i, {
