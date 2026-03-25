@@ -115,7 +115,7 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         break;
     case AST_EXPR_SYMBOL:
         const ast_expr_symbol_t *sym_node = (const ast_expr_symbol_t*) node;
-        debug("%08x: EXPR_SYMBOL_%s\n", node, node, sym_node->symbol->name);
+        debug("%08x: EXPR_SYMBOL_%08x_%s\n", node, node, sym_node->symbol->name);
         break;
     case AST_EXPR_CONST:
         const ast_expr_constant_t *const_node = (const ast_expr_constant_t*) node;
