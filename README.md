@@ -515,43 +515,47 @@ declarator		:= pointer? drct-declarator
 drct-declarator	:= identifier
 					| ( declarator )
 					| drct-declarator ( param-list? )
-					| drct-declarator [ const-expr ]
 pointer			:= * const? | * const? pointer
 param-list		:= param-decl | param-list , param-decl
 param-decl		:= decl-spec declarator | type-name
-type-name		:= decl-spec abst-declarator?
-abst-declarator	:= pointer | pointer? drct-abst-decl
+type-name		:= decl-spec abst-declarator
+abst-declarator	:= pointer? | pointer? drct-abst-decl
 drct-abst-decl	:= ( abst-declarator )
 					| drct-abst-decl? ( param-list? )
 
 // ****** Statements ******
 stmt			:= labeled-stmt
 					| comp-stmt
+					| decl-stmt
 					| expr-stmt
-					| select-stmt
-					| iter-stmt
-					| jump-stmt
+					| if-stmt
+					| switch-stmt
+					| for-stmt
+					| do-stmt
+					| while-stmt
+					| goto-stmt
+					| continue-stmt
+					| break-stmt
+					| return-stmt
 likelyhood-spec	:= likely | unlikely
 labeled-stmt	:= identifier : stmt
 					| likelyhood-spec case const-expr : stmt
 					| likelyhood-spec default : stmt
 comp-stmt		:= { block-item-list? }
-block-item-list	:= block-item
-					| block-item-list block-item
-block-item		:= decl | stmt
+block-item-list	:= stmt | block-item-list stmt
+decl-stmt		:= decl
 expr-stmt		:= expr? ;
-select-stmt		:= likelyhood-spec? if ( expr ) stmt
-					| likelyhood-spec? if ( expr ) stmt else stmt
-					| switch ( expr ) stmt
-iter-stmt		:= likelyhood-spec? while ( expr ) stmt
-					| do stmt likelyhood-spec? while ( expr ) ;
-					| likelyhood-spec? for ( expr? ; expr? ; expr? ) stmt
+if-stmt			:= likelyhood-spec? if ( expr ) stmt
+ifelse-stmt		:= likelyhood-spec? if ( expr ) stmt else stmt
+switch-stmt		:= switch ( expr ) stmt
+for-stmt		:= likelyhood-spec? for ( expr? ; expr? ; expr? ) stmt
 					| likelyhood-spec? for ( decl expr? ; expr? ) stmt
-jump-stmt		:= goto identifier ;
-					| goto identifier + expr ;
-					| continue ;
-					| break ;
-					| return expr? ;
+iter-stmt		:= likelyhood-spec? while ( expr ) stmt
+do-stmt			:= do stmt likelyhood-spec? while ( expr ) ;
+jump-stmt		:= goto expr ;
+continue-stmt	:= continue ;
+break-stmt		:= break ;
+return-stmt		:= return expr? ;
 
 // ****** Larger Building Blocks ******
 compile-unit	:= extern-decl | compile-unit
