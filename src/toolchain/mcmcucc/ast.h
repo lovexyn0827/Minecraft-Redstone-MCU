@@ -17,8 +17,8 @@ typedef enum ast_node_type {
     AST_STMT = 0x02000,
     AST_STMT_DECL,
     AST_STMT_EXPR,
+    AST_STMT_EMPTY,
     AST_STMT_IF,
-    AST_STMT_IFELSE,
     AST_STMT_FOR,
     AST_STMT_FORDECL,
     AST_STMT_WHILE,
@@ -270,6 +270,10 @@ typedef struct ast_stmt_expr {
     const ast_expr_t *expr;
 } ast_stmt_expr_t;
 
+typedef struct ast_stmt_empty {
+    AST_NODE_SHARED_FIELDS
+} ast_stmt_empty_t;
+
 typedef ARRAY_LIST_TYPE(const ast_stmt_t *) stmt_list_t;
 
 typedef struct ast_stmt_compound {
@@ -283,24 +287,17 @@ typedef struct ast_stmt_compound {
 typedef struct ast_stmt_if {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_expr_t *cond;
-    const ast_stmt_compound_t *if_true;
+    const ast_stmt_t *if_true;
+    const ast_stmt_t *if_false;
     bool likely_true;
 } ast_stmt_if_t;
-
-typedef struct ast_stmt_ifelse {
-    AST_STMT_NODE_SHARED_FIELDS
-    const ast_expr_t *cond;
-    const ast_stmt_compound_t *if_true;
-    const ast_stmt_compound_t *if_false;
-    bool likely_true;
-} ast_stmt_ifelse_t;
 
 typedef struct ast_stmt_for {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_expr_t *init;
     const ast_expr_t *cond;
     const ast_expr_t *step;
-    const ast_stmt_compound_t *body;
+    const ast_stmt_t *body;
     bool likely_true;
 } ast_stmt_for_t;
 
@@ -309,21 +306,22 @@ typedef struct ast_stmt_fordecl {
     const ast_decl_t *init;
     const ast_expr_t *cond;
     const ast_expr_t *step;
-    const ast_stmt_compound_t *body;
+    const ast_stmt_t *body;
     bool likely_true;
+    symbol_tbl_t symbol_tbl;
 } ast_stmt_fordecl_t;
 
 typedef struct ast_stmt_while {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_expr_t *cond;
-    const ast_stmt_compound_t *body;
+    const ast_stmt_t *body;
     bool likely_true;
 } ast_stmt_while_t;
 
 typedef struct ast_stmt_do {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_expr_t *cond;
-    const ast_stmt_compound_t *body;
+    const ast_stmt_t *body;
     bool likely_true;
 } ast_stmt_do_t;
 
@@ -343,9 +341,9 @@ typedef struct ast_stmt_default {
 typedef struct ast_stmt_switch {
     AST_STMT_NODE_SHARED_FIELDS
     const ast_expr_t *switch_on;
-    const ast_stmt_compound_t *body;
+    const ast_stmt_t *body;
     HASH_MAP_TYPE(const ast_expr_t*, const ast_stmt_case_t*) cases;
-    const ast_stmt_compound_t *default_case;
+    const ast_stmt_t *default_case;
     bool likely_true;
 } ast_stmt_switch_t;
 
@@ -357,13 +355,13 @@ typedef struct ast_stmt_goto {
 
 typedef struct ast_stmt_break {
     AST_STMT_NODE_SHARED_FIELDS
-    const ast_stmt_compound_t *from;
+    const ast_stmt_t *from;
     bool likely_true;
 } ast_stmt_break_t;
 
 typedef struct ast_stmt_continue {
     AST_STMT_NODE_SHARED_FIELDS
-    const ast_stmt_compound_t *to;
+    const ast_stmt_t *to;
     bool likely_true;
 } ast_stmt_continue_t;
 

@@ -49,9 +49,9 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         debug("%08x: EXPR_%08x\n", node, node);
         dump_ast((const ast_node_t*) expr_node->expr, node, "Expr");
         break;
-    case AST_STMT_IF:
+    case AST_STMT_EMPTY:
         break;
-    case AST_STMT_IFELSE:
+    case AST_STMT_IF:
         break;
     case AST_STMT_FOR:
         break;
