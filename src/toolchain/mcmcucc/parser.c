@@ -1182,6 +1182,7 @@ bool parse_declarator_internal(context_t *ctx, type_derivation_stack_t *derivati
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
     } else {
         // A := P? and an identifier follows
+        // FIXME f(uint8_t x)
         if (has_ptr_decl) {
             ARRAY_LIST_APPEND(*derivations, ((type_derivation_t*) ptr_derivation), type_derivation_t*);
         }
@@ -1333,6 +1334,7 @@ bool parse_expr_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 bool parse_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest);
 
 bool parse_comp_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    debug(" ==> Parsing: compound-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_PUNCT_L_CP) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_CP);
     ast_stmt_compound_t *comp_stmt = (ast_stmt_compound_t*) malloc(sizeof(ast_stmt_compound_t));
@@ -1358,6 +1360,7 @@ bool parse_comp_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 //					| likelyhood-spec default : stmt
 
 bool parse_labeled_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    debug(" ==> Parsing: labeled-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_IDENTIFIER) return false;
     const token_t *lbl_token = read_current(ctx->ptr);
     symbol_t *lbl_symb = register_label(ctx, lbl_token->token);
@@ -1377,6 +1380,7 @@ bool parse_labeled_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 }
 
 bool parse_case_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    debug(" ==> Parsing: case-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_DEFAULT) return false;
     skip_current(ctx->ptr);
     ast_stmt_case_t *labelled_stmt = (ast_stmt_case_t*) malloc(sizeof(ast_stmt_case_t));
@@ -1393,6 +1397,7 @@ bool parse_case_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t
 }
 
 bool parse_default_case_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    debug(" ==> Parsing: default-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_DEFAULT) return false;
     skip_current(ctx->ptr);
     if (peek_current(ctx->ptr)->type != TOKEN_PUNCT_COLON) return false;
@@ -1409,6 +1414,7 @@ bool parse_default_case_stmt(context_t *ctx, ast_node_t *parent, bool likely, as
 // ifelse-stmt		:= likelyhood-spec? if ( expr ) stmt else stmt
 
 bool parse_if_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    debug(" ==> Parsing: if-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_IF) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_IF);
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
@@ -1431,6 +1437,7 @@ bool parse_if_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t *
 // switch-stmt		:= switch ( expr ) stmt
 
 bool parse_switch_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    debug(" ==> Parsing: switch-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_SWITCH) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_SWITCH);
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
@@ -1447,6 +1454,7 @@ bool parse_switch_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 //					| likelyhood-spec? for ( decl expr? ; expr? ) stmt
 
 bool parse_for_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    debug(" ==> Parsing: for-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_FOR) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_FOR);
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
@@ -1499,6 +1507,7 @@ bool parse_for_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t 
 // while-stmt		:= likelyhood-spec? while ( expr ) stmt
 
 bool parse_while_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    debug(" ==> Parsing: while-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_WHILE) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_WHILE);
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P);
@@ -1516,6 +1525,7 @@ bool parse_while_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_
 // do-stmt			:= do stmt likelyhood-spec? while ( expr ) ;
 
 bool parse_do_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
+    debug(" ==> Parsing: do-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_DO) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_DO);
     ast_stmt_do_t *do_stmt = (ast_stmt_do_t*) malloc(sizeof(ast_stmt_do_t));
@@ -1535,6 +1545,7 @@ bool parse_do_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t *
 // goto-stmt		:= goto expr ;
 
 bool parse_goto_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    debug(" ==> Parsing: goto-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_GOTO) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_GOTO);
     ast_stmt_goto_t *goto_stmt = (ast_stmt_goto_t*) malloc(sizeof(ast_stmt_goto_t));
@@ -1549,6 +1560,7 @@ bool parse_goto_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 // continue-stmt	:= continue ;
 
 bool parse_continue_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    debug(" ==> Parsing: continue-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_CONTINUE) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_CONTINUE);
     ast_stmt_continue_t *continue_stmt = (ast_stmt_continue_t*) malloc(sizeof(ast_stmt_continue_t));
@@ -1562,6 +1574,7 @@ bool parse_continue_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) 
 // break-stmt		:= break ;
 
 bool parse_break_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    debug(" ==> Parsing: break-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_BREAK) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_BREAK);
     ast_stmt_break_t *break_stmt = (ast_stmt_break_t*) malloc(sizeof(ast_stmt_break_t));
@@ -1575,6 +1588,7 @@ bool parse_break_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 // return-stmt		:= return expr? ;
 
 bool parse_return_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
+    debug(" ==> Parsing: return-stmt\n");
     if (peek_current(ctx->ptr)->type != TOKEN_KW_GOTO) return false;
     verify_and_skip_current(ctx->ptr, TOKEN_KW_GOTO);
     ast_stmt_return_t *return_stmt = (ast_stmt_return_t*) malloc(sizeof(ast_stmt_return_t));
@@ -1650,6 +1664,7 @@ bool parse_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 // func-def		:= decl-spec declarator decl-list? comp-stmt
 
 bool parse_func_impl(context_t *ctx, ast_node_t *parent, ast_function_impl_t **dest) {
+    debug(" ==> Parsing: func-impl\n");
     mark_current(ctx->ptr);
     uint_t decl_spec;
     if (!parse_decl_specifier(ctx, &decl_spec)) {
@@ -1669,10 +1684,15 @@ bool parse_func_impl(context_t *ctx, ast_node_t *parent, ast_function_impl_t **d
         return false;
     }
 
-    pop_mark(ctx->ptr);
     impl->decl = (ast_decl_direct_function_t*) decl;
     memcpy(&(impl->symbol_tbl), &(((ast_decl_direct_function_t*) decl)->symbol_tbl), sizeof(symbol_tbl_t));
-    parse_comp_stmt(ctx, (ast_node_t*) impl, (ast_stmt_t**) &(impl->body));
+    if (!parse_comp_stmt(ctx, (ast_node_t*) impl, (ast_stmt_t**) &(impl->body))) {
+        return_marked(ctx->ptr);
+        return false;
+    }
+
+    pop_mark(ctx->ptr);
+    *dest = impl;
     return true;
 }
 
@@ -1688,7 +1708,7 @@ void parse(context_t *ctx) {
     // ast_expr_t *expr;
     // parse_expr(ctx, NULL, &expr);
     // dump_ast((ast_node_t*) expr, NULL, "Root");
-    ast_stmt_t *stmt;
-    parse_stmt(ctx, NULL, &stmt);
+    ast_function_impl_t *stmt;
+    parse_func_impl(ctx, NULL, &stmt);
     dump_ast((ast_node_t*) stmt, NULL, "");
 }

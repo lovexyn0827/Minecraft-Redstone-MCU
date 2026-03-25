@@ -192,6 +192,10 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     case AST_EXPR_EXPRSZ:
         break;
     case AST_FUNC_IMPL:
+        const ast_function_impl_t *fn_impl = (const ast_function_impl_t*) node;
+        debug("%08x: EXPR_SYMBOL_%08x_%s\n", node, node, fn_impl->decl->decl_name->name);
+        dump_ast((const ast_node_t*) fn_impl->decl, node, "Decl");
+        dump_ast((const ast_node_t*) fn_impl->body, node, "Body");
         break;
     default:
         error("Unrecognized node type: %d\n", node->node_type);
