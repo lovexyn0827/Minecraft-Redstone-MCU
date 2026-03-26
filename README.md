@@ -685,6 +685,6 @@ GF256_MUL_END:
 
 ## Note
 
-> It always matters whether you are opening your text editor or turn to a random LLM when you're about writing something. 
+> It always matters whether you are opening your text editor or turning to a random LLM when you're about to write something. 
 >
-> Yeah, it always matters, even it is 2026 when chatbots are being transformed from toys to (basically) acceptable assistants.
+> Yeah, it always matters, even if it is 2026 when chatbots are being transformed from toys to (basically) acceptable assistants.
