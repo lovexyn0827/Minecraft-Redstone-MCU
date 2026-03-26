@@ -519,9 +519,9 @@ pointer			:= * const? | * const? pointer
 param-list		:= param-decl | param-list , param-decl
 param-decl		:= decl-spec declarator | type-name
 type-name		:= decl-spec abst-declarator
-abst-declarator	:= pointer? | pointer? drct-abst-decl
-drct-abst-decl	:= ( abst-declarator )
-					| drct-abst-decl? ( param-list? )
+abst-declarator	:= pointer? 
+					| pointer? ( abst-declarator ) 
+					| pointer? ( drct-abst-decl ) ( param-list? )
 
 // ****** Statements ******
 stmt			:= labeled-stmt
@@ -546,13 +546,13 @@ block-item-list	:= stmt | block-item-list stmt
 decl-stmt		:= decl
 expr-stmt		:= expr? ;
 if-stmt			:= likelyhood-spec? if ( expr ) stmt
-ifelse-stmt		:= likelyhood-spec? if ( expr ) stmt else stmt
+					| likelyhood-spec? if ( expr ) stmt else stmt
 switch-stmt		:= switch ( expr ) stmt
 for-stmt		:= likelyhood-spec? for ( expr? ; expr? ; expr? ) stmt
 					| likelyhood-spec? for ( decl expr? ; expr? ) stmt
-iter-stmt		:= likelyhood-spec? while ( expr ) stmt
+while-stmt		:= likelyhood-spec? while ( expr ) stmt
 do-stmt			:= do stmt likelyhood-spec? while ( expr ) ;
-jump-stmt		:= goto expr ;
+goto-stmt		:= goto expr ;
 continue-stmt	:= continue ;
 break-stmt		:= break ;
 return-stmt		:= return expr? ;
