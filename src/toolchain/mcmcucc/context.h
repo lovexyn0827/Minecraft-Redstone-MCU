@@ -39,6 +39,7 @@ typedef struct context {
 symbol_t *get_symbol(context_t *ctx, str name);
 symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *decl);
 symbol_t *register_label(context_t *ctx, str name);
+void register_symbol(context_t *ctx, symbol_t *symb);
 
 extern symbol_t NIL_SYMBOL;
 

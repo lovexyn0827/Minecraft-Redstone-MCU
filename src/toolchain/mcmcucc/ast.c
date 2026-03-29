@@ -10,6 +10,12 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
     switch (node->node_type) {
     case AST_ROOT:
         debug("%08x: ROOT_%08x\n", node, node);
+        const ast_root_t *root = (const ast_root_t*) node;
+        ARRAY_LIST_TRAVERSE(root->children, const ast_node_t*, child, child_idx, {
+            char_t child_idx_buf[16];
+            sprintf(child_idx_buf, "Child_%d", child_idx);
+            dump_ast(child, node, child_idx_buf);
+        })
         break;
     case AST_TYPENAME:
         break;

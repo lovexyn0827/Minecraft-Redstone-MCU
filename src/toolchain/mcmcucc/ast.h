@@ -386,6 +386,7 @@ typedef struct ast_function_impl {
 
 typedef struct ast_root {
     AST_NODE_SHARED_FIELDS
+    ARRAY_LIST_TYPE(const ast_node_t*) children;
     symbol_tbl_t symbol_tbl;
 } ast_root_t;
 

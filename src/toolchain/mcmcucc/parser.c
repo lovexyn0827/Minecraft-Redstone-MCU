@@ -1093,15 +1093,11 @@ bool parse_param_decl(context_t *ctx, ast_decl_direct_variable_t **dest) {
         if (parse_decl_specifier(ctx, &decl_spec)) {
             ast_typename_t *decl_type;
             type_spec_to_ast_typename_node(decl_spec, (ast_node_t*) param_decl, (ast_typename_t**) &decl_type);
-            ast_decl_direct_variable_t *param_var_decl;
-            parse_declarator(ctx, (ast_node_t*) param_decl, decl_type, decl_spec, (ast_decl_t**) &param_var_decl);
-            if (param_var_decl->decl_name->type != SYM_VARIABLE) {
+            parse_declarator(ctx, (ast_node_t*) param_decl, decl_type, decl_spec, (ast_decl_t**) &param_decl);
+            if (param_decl->decl_name->type != SYM_VARIABLE) {
                 error_on_token(peek_current(ctx->ptr), "Parameters must be variables!\n");
                 return false;
             }
-
-            param_decl->decl_name = param_var_decl->decl_name;
-            param_decl->decl_type = param_var_decl->decl_type;
         } else {
             return false;
         }
@@ -1116,6 +1112,12 @@ bool parse_param_decl(context_t *ctx, ast_decl_direct_variable_t **dest) {
 bool parse_param_list(context_t *ctx, param_list_t *dest) {
     debug(" ==> Parsing: param-list\n");
     ARRAY_LIST_INIT(ast_decl_t*, *dest)
+    ast_stmt_compound_t temp_scope;
+    temp_scope.node_type = AST_STMT_COMPOUND;
+    temp_scope.parent = ctx->cur_scope;
+    HASH_MAP_INIT(str, symbol_t*, temp_scope.symbol_tbl, 64, hash_str, &NIL_SYMBOL)
+    ast_node_t *prev_scope = ctx->cur_scope;
+    ctx->cur_scope = (ast_node_t*) &temp_scope;
     while (peek_current(ctx->ptr)->type != TOKEN_PUNCT_R_P) {
         ast_decl_direct_variable_t *param_decl;
         if (parse_param_decl(ctx, &param_decl)) {
@@ -1129,6 +1131,9 @@ bool parse_param_list(context_t *ctx, param_list_t *dest) {
         }
     }
 
+    // Deferring symbol registration till type derivation
+    HASH_MAP_FREE(temp_scope.symbol_tbl)
+    ctx->cur_scope = prev_scope;
     return true;
 }
 
@@ -1260,6 +1265,14 @@ bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_i
         fn_decl->inline_func = (spec & DECL_SPEC_INLINE) != 0;
         fn_decl->decl_name = register_declared_symbol(ctx, ident_token->token, (ast_decl_t*) fn_decl);
         HASH_MAP_INIT(str, symbol_t*, fn_decl->symbol_tbl, 64, hash_str, &NIL_SYMBOL)
+        // We are restoring param symbols for func declaration only. Parameters in type names are ignored.
+        ast_node_t *prev_scope = ctx->cur_scope;
+        ctx->cur_scope = (ast_node_t*) fn_decl;
+        param_list_t *params = &(((ast_typename_funct_t*) fn_decl->decl_type)->param_type);
+        ARRAY_LIST_TRAVERSE(*params, const ast_decl_direct_variable_t *, param, param_i, {
+            register_symbol(ctx, (symbol_t*) param->decl_name);
+        })
+        ctx->cur_scope = prev_scope;
         decl_node = (ast_decl_t*) fn_decl;
         break;
     default:
@@ -1275,7 +1288,7 @@ bool parse_declarator(context_t *ctx, ast_node_t *parent, ast_typename_t *type_i
 
 // *********** Statements ***********
 
-// decl			:= decl-spec init-decl-list? ;
+// decl			    := decl-spec init-decl-list? ;
 // init-decl-list	:= init-decl | init-decl-list, init-decl
 // init-decl		:= declarator | declarator = assign-expr
 
@@ -1589,8 +1602,8 @@ bool parse_break_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 
 bool parse_return_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
     debug(" ==> Parsing: return-stmt\n");
-    if (peek_current(ctx->ptr)->type != TOKEN_KW_GOTO) return false;
-    verify_and_skip_current(ctx->ptr, TOKEN_KW_GOTO);
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_RETURN) return false;
+    verify_and_skip_current(ctx->ptr, TOKEN_KW_RETURN);
     ast_stmt_return_t *return_stmt = (ast_stmt_return_t*) malloc(sizeof(ast_stmt_return_t));
     return_stmt->node_type = AST_STMT_RETURN;
     return_stmt->parent = parent;
@@ -1630,13 +1643,13 @@ bool parse_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
     case TOKEN_KW_WHILE:
         return parse_while_stmt(ctx, parent, likely, dest);
     case TOKEN_KW_GOTO:
-        break;  // TODO
+        return parse_goto_stmt(ctx, parent, dest);
     case TOKEN_KW_CONTINUE:
-        break;  // TODO
+        return parse_continue_stmt(ctx, parent, dest);
     case TOKEN_KW_BREAK:
-        break;  // TODO
+        return parse_break_stmt(ctx, parent, dest);
     case TOKEN_KW_RETURN:
-        break;  // TODO
+        return parse_return_stmt(ctx, parent, dest);
     case TOKEN_KW_VOID:
     case TOKEN_KW_UINT8_T:
     case TOKEN_KW_INT8_T:
@@ -1708,7 +1721,16 @@ void parse(context_t *ctx) {
     // ast_expr_t *expr;
     // parse_expr(ctx, NULL, &expr);
     // dump_ast((ast_node_t*) expr, NULL, "Root");
-    ast_function_impl_t *stmt;
-    parse_func_impl(ctx, NULL, &stmt);
-    dump_ast((ast_node_t*) stmt, NULL, "");
+    ast_root_t *root = &(ctx->ast.root);
+    while (peek_current(ctx->ptr)->type != TOKEN_EOF) {
+        ast_function_impl_t *fn_impl;
+        ast_stmt_t *decl;
+        if (parse_func_impl(ctx, (ast_node_t*) root, &fn_impl)) {
+            ARRAY_LIST_APPEND(root->children, (ast_node_t*) fn_impl, const ast_node_t*)
+        } else if (parse_decl_stmt(ctx, (ast_node_t*) root, &decl)) {
+            ARRAY_LIST_APPEND(root->children, (ast_node_t*) decl, const ast_node_t*)
+        }
+    }
+
+    dump_ast((ast_node_t*) root, NULL, "");
 }

@@ -97,6 +97,7 @@ symbol_t UNSPECIFIED_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Unspecified]", .
 void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
     ctx->ast.root.node_type = AST_ROOT;
     ctx->ast.root.parent = NULL;
+    ARRAY_LIST_INIT(const ast_node_t*, ctx->ast.root.children)
     HASH_MAP_INIT(str, symbol_t*, ctx->ast.root.symbol_tbl, 1024, hash_str, &NIL_SYMBOL);
     ctx->ptr = (read_head_t*) malloc(sizeof(read_head_t));
     ctx->ptr->cur_pos = 0;
