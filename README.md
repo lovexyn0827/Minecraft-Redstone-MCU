@@ -182,6 +182,11 @@ J-Type: |opc| rs|  imm_12   | (4 + 4 + 12)
 - We have no addition and subtraction with carry, which require us to use twice more instructions (in RISC-V-style) and thus making arithmetics between long integers twice slower. However, we can free us from struggling with flags.
 - We have no explicit `SUBI` instructions, since the assembler can easily help us to translate it to corresponding `ADDI`s. The same applies to `NOP`, etc.
 - Previously we have even no direct jump instruction that covers all 12-bits instruction memory spaces at all, instead, we have only one capable for jumping within up to $\pm 512$ words, which is `JMP`. That is also fine concerning that most direct jumps (rather than subroutine calls) are local, i.e. within a small memory area within the current routine, and $\pm 512$ words will be more than useful since most loop bodies span only a few dozens of instructions and even 8086 which runs much longer programs works well with $\pm 127$ jumps.
+- I-Type bit manipulating instructions (e.g. `SARI`) have their own way to interpret the `imm8` field, which takes the most significant bits as the input of the ALU. This is fine since it leave us the least significant where the R-Type `funct` field unused so that we can copy the `funct` field from R-Type counterparts to the unused bits, thus simplifying the generation of the `AluFunct` signal.
+- We have a `BGEZ` instruction instead of `BGTZ` (branch if greater than zero), because it is more common in programs (program some simple downward loops and you'll probably see it) and easier to wire. `CMPU` and `CMPI` instructions doesn't follow this convention as greater or equal is easy to implement with an additional `XORI`.
+- We have no explicit support for signed arithmetics besides branching instructions, as they are rare in programs on MCUs, and our opcode space is limited.
+- Also, we have no explicit `MUL`, `DIV` instruction, because that they are expensive to integrate into a core, and likely to impair the max clock frequency. A hardware accelerator on the CSR bus will compensate the loss.
+- Non-byte-aligned 20-bits instructions are fine since the IM is never byte addressable. Shorter ones are possible but much less elegant as we must admit.
 
 ### R-Type Instructions
 
@@ -606,10 +611,10 @@ uint8_t gf256_mul_on_fly(uint8_t x, uint8_t y) {
 
 void calc_rs_ecc(uint8_t *dat, uint8_t *gp) {
     uint8_t *ecc = dat + N;
-    int8_t i = N - 1;
+    uint8_t i = N - 1;
     do {
-        int8_t x = ecc[0] ^ dat[i];
-        int j = 0;
+        uint8_t x = ecc[0] ^ dat[i];
+        uint8_t j = 0;
         do {
             ecc[j] = ecc[j + 1] ^ gf256_mul_on_fly(gp[K - j - 1], x);
         } while (++j < K);
@@ -685,6 +690,6 @@ GF256_MUL_END:
 
 ## Note
 
-> It always matters whether you are opening your text editor or turning to a random LLM when you're about to write something. 
+> It always matters whether you are opening your text editor or turning to a random LLM when you're about to write something new. 
 >
 > Yeah, it always matters, even if it is 2026 when chatbots are being transformed from toys to (basically) acceptable assistants.
