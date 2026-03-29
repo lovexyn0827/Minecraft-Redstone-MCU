@@ -101,14 +101,26 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         dump_ast((ast_node_t*) do_stmt->body, node, "Body");
         break;
     case AST_STMT_SWITCH:
+        const ast_stmt_switch_t *switch_stmt = (const ast_stmt_switch_t*) node;
+        debug("%08x: SWITCH_%08x\n", node, node);
+        dump_ast((ast_node_t*) switch_stmt->switch_on, node, "On");
+        dump_ast((ast_node_t*) switch_stmt->body, node, "Body");
         break;
     case AST_STMT_GOTO:
+        const ast_stmt_goto_t *goto_stmt = (const ast_stmt_goto_t*) node;
+        debug("%08x: GOTO_%08x\n", node, node);
+        dump_ast((ast_node_t*) goto_stmt->target, node, "Target");
         break;
     case AST_STMT_BREAK:
+        debug("%08x: BREAK_%08x\n", node, node);
         break;
     case AST_STMT_CONTINUE:
+        debug("%08x: CONTINUE_%08x\n", node, node);
         break;
     case AST_STMT_RETURN:
+        const ast_stmt_return_t* ret_stmt = (const ast_stmt_return_t*) node;
+        debug("%08x: RETURN_%08x\n", node, node);
+        dump_ast((ast_node_t*) ret_stmt->ret_value, node, "Rets");
         break;
     case AST_STMT_COMPOUND:
         const ast_stmt_compound_t *comp_stmt = (const ast_stmt_compound_t*) node;
@@ -119,12 +131,19 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
             dump_ast((const ast_node_t*) stmt, node, arg_idx_buf);
         })
         break;
-        break;
     case AST_STMT_CASE:
+        const ast_stmt_case_t *case_stmt = (const ast_stmt_case_t*) node;
+        debug("%08x: CASE_%08x_%s\n", node, node, case_stmt->likely ? "L" : "U");
+        dump_ast((const ast_node_t*) case_stmt->switch_on, node, "Val");
         break;
     case AST_STMT_DEFAULT:
+        const ast_stmt_default_t *default_stmt = (const ast_stmt_default_t*) node;
+        debug("%08x: DEFAULT_%08x_%s\n", node, node, default_stmt->likely ? "L" : "U");
         break;
     case AST_STMT_LABELED:
+        const ast_stmt_labeled_t *lbld_stmt = (const ast_stmt_labeled_t*) node;
+        debug("%08x: LABEL_%08x_%s\n", node, node, lbld_stmt->label->name);
+        dump_ast((const ast_node_t*) lbld_stmt->underlying, node, "Stmt");
         break;
     case AST_DECL:
         break;
@@ -186,6 +205,11 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         dump_ast((const ast_node_t*) binop_node->right_opnd, node, "Ropnd");
         break;
     case AST_EXPR_COND:
+        const ast_expr_cond_t *cond_expr = (const ast_expr_cond_t*) node;
+        debug("%08x: COND_%08x_%s\n", node, node, cond_expr->likely_true ? "L" : "U");
+        dump_ast((const ast_node_t*) cond_expr->cond, node, "Cond");
+        dump_ast((const ast_node_t*) cond_expr->if_true, node, "IfTrue");
+        dump_ast((const ast_node_t*) cond_expr->if_false, node, "IfFalse");
         break;
     case AST_EXPR_ASSIGN:
         const ast_expr_assign_t *assign_node = (const ast_expr_assign_t*) node;
@@ -194,8 +218,14 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         dump_ast((const ast_node_t*) assign_node->src, node, "Src");
         break;
     case AST_EXPR_TYPESZ:
+        const ast_expr_sizeof_expr_t* exprsz_expr = (const ast_expr_sizeof_expr_t*) node;
+        debug("%08d: SIZEOF_%08d\n");
+        dump_ast((const ast_node_t*) exprsz_expr->sizeof_expr, node, "Of");
         break;
     case AST_EXPR_EXPRSZ:
+        const ast_expr_sizeof_type_t* typesz_expr = (const ast_expr_sizeof_type_t*) node;
+        debug("%08d: SIZEOF_%08d\n");
+        dump_ast((const ast_node_t*) typesz_expr->sizeof_type, node, "Of");
         break;
     case AST_FUNC_IMPL:
         const ast_function_impl_t *fn_impl = (const ast_function_impl_t*) node;

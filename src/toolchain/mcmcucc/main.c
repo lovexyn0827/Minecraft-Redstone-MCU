@@ -5,6 +5,8 @@
 
 #include "context.h"
 #include "parser.h"
+#include "semantic_analysis.h"
+#include "opt_passes.h"
 
 uint_t error_cnt;
 uint_t warning_cnt;
@@ -52,6 +54,20 @@ int compile(str source, str output) {
     init_compilation_context(&ctx, &token_lst);
     parse(&ctx);
     // ...
+    if (error_cnt > 0) {
+        print_error_cnt_and_exit();
+    }
+
+    check_semantics(&ctx);
+    if (error_cnt > 0) {
+        print_error_cnt_and_exit();
+    }
+
+    optimize_ast(&ctx);
+    if (error_cnt > 0) {
+        print_error_cnt_and_exit();
+    }
+
     print_error_cnt_and_exit();
     return 0;
 }

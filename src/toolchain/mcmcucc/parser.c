@@ -192,6 +192,11 @@ uint_t parse_constant_value(const token_t *token) {
     }
 }
 
+// lvalue propagation:
+//  - Conatant: false
+//  - Identifier: true iff the identifier denotes an variable
+//  - Parented: Inherit inner expr
+
 bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     debug(" ==> Parsing: primary-expr\n");
     const token_t *first_token = peek_current(ctx->ptr);
@@ -258,6 +263,9 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 //                     | postfix-expr --
 
 bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest);
+
+// lvalue propagation:
+//  - true only on [], or inheritance
 
 bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     debug(" ==> Parsing: postfix-expr\n");
@@ -343,6 +351,9 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 // unary-op		:= & * + - ~ !
 
 bool parse_typename(context_t *ctx, ast_node_t *parent, ast_typename_t **dest);
+
+// lvalue propagation:
+//  - true only on * (dereference)
 
 bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     debug(" ==> Parsing: unary-expr\n");
@@ -710,6 +721,7 @@ bool parse_cond_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     ast_expr_cond_t *cond_node = (ast_expr_cond_t*) malloc(sizeof(ast_expr_cond_t));
     cond_node->node_type = AST_EXPR_COND;
     cond_node->cond = left_opnd;
+    verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_QUESTION);   // Skip '?'
     parse_expr(ctx, (ast_node_t*) cond_node, (ast_expr_t**) &(cond_node->if_true));
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_COLON);   // Skip ':'
     parse_cond_expr(ctx, (ast_node_t*) cond_node, (ast_expr_t**) &(cond_node->if_false));
@@ -1394,7 +1406,7 @@ bool parse_labeled_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
 
 bool parse_case_stmt(context_t *ctx, ast_node_t *parent, bool likely, ast_stmt_t **dest) {
     debug(" ==> Parsing: case-stmt\n");
-    if (peek_current(ctx->ptr)->type != TOKEN_KW_DEFAULT) return false;
+    if (peek_current(ctx->ptr)->type != TOKEN_KW_CASE) return false;
     skip_current(ctx->ptr);
     ast_stmt_case_t *labelled_stmt = (ast_stmt_case_t*) malloc(sizeof(ast_stmt_case_t));
     ast_expr_t *switch_on;
@@ -1460,6 +1472,7 @@ bool parse_switch_stmt(context_t *ctx, ast_node_t *parent, ast_stmt_t **dest) {
     parse_expr(ctx, (ast_node_t*) switch_stmt, (ast_expr_t**) &(switch_stmt->switch_on));
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P);
     parse_stmt(ctx, (ast_node_t*) switch_stmt, (ast_stmt_t**) &(switch_stmt->body));
+    *dest = (ast_stmt_t*) switch_stmt;
     return true;
 }
 

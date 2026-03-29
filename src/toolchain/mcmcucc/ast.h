@@ -126,7 +126,7 @@ typedef struct ast_expr_sizeof_expr {
     const ast_expr_t *sizeof_expr;
 } ast_expr_sizeof_expr_t;
 
-typedef struct ast_expr_sizeof {
+typedef struct ast_expr_sizeof_type {
     AST_EXPR_NODE_SHARED_FIELDS
     const ast_typename_t *sizeof_type;
 } ast_expr_sizeof_type_t;

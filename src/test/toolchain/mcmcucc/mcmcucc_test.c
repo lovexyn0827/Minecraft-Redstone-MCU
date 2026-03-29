@@ -1,4 +1,4 @@
-uint8_t (func)() {
+uint8_t (func)(uint8_t par) {
   uint8_t i, x = 1 + 2, *p;
   int8_t (*(f)(uint8_t param1, uint8_t * param2))(void);
   int8_t (*(*f1)(uint8_t))(void);
@@ -17,4 +17,16 @@ uint8_t (func)() {
   }
 
   do i++; while ((i *= 7) != 0);
+
+  switch ((i > 3 ? (17 - 16) : x) + par) {
+  case 0:
+	x++;
+	break;
+  case 1 + 1:
+	return x;
+  default:
+	i--;
+  }
+
+  return i * x;
 }
