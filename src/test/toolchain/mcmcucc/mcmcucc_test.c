@@ -29,4 +29,5 @@ uint8_t (func)(uint8_t par) {
   }
 
   return i * x;
+  return 1 + 2 * 3 + (1 != 2) + (-3) + (1 - 1 ? 10 : 20) + 4 * sizeof(uint8_t);
 }
