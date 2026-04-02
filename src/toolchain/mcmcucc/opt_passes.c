@@ -152,7 +152,7 @@ ast_node_t *eval_constexpr(ast_node_t *node) {
 
 void fold_constants(context_t *ctx) {
     for_each_node((ast_node_t*) &(ctx->ast.root), NULL, eval_constexpr);
-    debug("##### AFTER: \n");
+    debug("##### AFTER Constant Folding: \n");
     dump_ast((ast_node_t*) &(ctx->ast.root), NULL, "");
 }
 

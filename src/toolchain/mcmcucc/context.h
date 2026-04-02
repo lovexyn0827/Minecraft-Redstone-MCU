@@ -21,12 +21,26 @@ typedef enum {
     SYM_NOTEXIST = 1 << 31
 } symbol_type_t;
 
+typedef enum obj_addr_space {
+    OBJ_ADDR_REG,
+    OBJ_ADDR_SRAM,
+    OBJ_ADDR_IM,
+    OBJ_ADDR_CSTACK,
+    OBJ_ADDR_OSTACK,
+    OBJ_ADDR_CSR
+} obj_addr_space_t;
+
+typedef struct obj_addr {
+    obj_addr_space_t type;
+    uint_t addr;
+} obj_addr_t;
+
 typedef struct symbol_t {
     symbol_type_t type;
     str name;
     const ast_decl_t *decl;
     bool immutable;
-    uint_t address;
+    const obj_addr_t *address;
 } symbol_t;
 
 typedef struct context {

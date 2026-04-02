@@ -94,10 +94,14 @@ typedef struct ast_typename_funct {
 
 // *********** Expressions ***********
 
+typedef struct obj_addr obj_addr_t;
+
 #define AST_EXPR_NODE_SHARED_FIELDS \
     AST_NODE_SHARED_FIELDS\
     bool constant;\
-    bool lvalue;
+    bool lvalue;\
+    const ast_typename_t *type;\
+    const obj_addr_t *addr;
 
 typedef struct ast_expr {
     AST_EXPR_NODE_SHARED_FIELDS
@@ -378,7 +382,7 @@ typedef struct ast_function_impl {
     AST_NODE_SHARED_FIELDS
     const ast_decl_direct_function_t *decl;
     const ast_stmt_compound_t *body;
-    uint_t address;
+    const obj_addr_t *address;
     symbol_tbl_t symbol_tbl;
 } ast_function_impl_t;
 
