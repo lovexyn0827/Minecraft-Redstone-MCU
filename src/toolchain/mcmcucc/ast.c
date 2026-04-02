@@ -238,3 +238,206 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         break;
     }
 }
+
+#define REPLACE_NODE_FIELD(F) {\
+    ast_node_t *new_node = for_each_node((ast_node_t*) (F), before_children, after_children);\
+    if (new_node != NULL) {\
+        (F) = (typeof(F)) new_node;\
+    }\
+}
+
+#define REPLACE_NODE_FIELD_IN_LIST(L, F, I) {\
+    ast_node_t *new_node = for_each_node((ast_node_t*) (F), before_children, after_children);\
+    if (new_node != NULL) {\
+        ARRAY_LIST_SET(L, F, I)\
+    }\
+}
+
+ast_node_t *for_each_node(ast_node_t *node, node_visitor before_children, node_visitor after_children) {
+    if (node == NULL) {
+        return NULL;
+    }
+
+    if (before_children != NULL) {
+        ast_node_t *new_node = before_children(node);
+        if (new_node != NULL) {
+            node = new_node;
+        }
+    }
+
+    switch (node->node_type) {
+    case AST_ROOT:
+        ast_root_t *root = (ast_root_t*) node;
+        ARRAY_LIST_TRAVERSE(root->children, ast_node_t*, child, child_idx, {
+            REPLACE_NODE_FIELD_IN_LIST(root->children, child, child_idx)
+        })
+        break;
+    case AST_TYPENAME:
+        break;
+    case AST_TYPE_PRIM:
+        break;
+    case AST_TYPE_PTR:
+        ast_typename_ptr_t *ptr_type_node = (ast_typename_ptr_t*) node;
+        REPLACE_NODE_FIELD(ptr_type_node->underlying_type)
+        break;
+    case AST_TYPE_FUNCT:
+        ast_typename_funct_t *fn_type_node = (ast_typename_funct_t*) node;
+        REPLACE_NODE_FIELD(fn_type_node->return_type)
+        ARRAY_LIST_TRAVERSE(fn_type_node->param_type, ast_decl_direct_variable_t*, param, param_idx, {
+            REPLACE_NODE_FIELD_IN_LIST(fn_type_node->param_type, param, param_idx)
+        })
+        break;
+    case AST_STMT:
+        break;
+    case AST_STMT_DECL:
+        ast_stmt_decl_t *decl_node = (ast_stmt_decl_t*) node;
+        ARRAY_LIST_TRAVERSE(decl_node->declarators, ast_decl_t*, decl, decl_idx, {
+            REPLACE_NODE_FIELD_IN_LIST(decl_node->declarators, decl, decl_idx)
+        })
+        break;
+    case AST_STMT_EXPR:
+        ast_stmt_expr_t *expr_node = (ast_stmt_expr_t*) node;
+        REPLACE_NODE_FIELD(expr_node->expr)
+        break;
+    case AST_STMT_EMPTY:
+        break;
+    case AST_STMT_IF:
+        ast_stmt_if_t *if_stmt = (ast_stmt_if_t*) node;
+        REPLACE_NODE_FIELD(if_stmt->cond)
+        REPLACE_NODE_FIELD(if_stmt->if_true)
+        REPLACE_NODE_FIELD(if_stmt->if_false)
+        break;
+    case AST_STMT_FOR:
+        ast_stmt_for_t *for_stmt = (ast_stmt_for_t*) node;
+        REPLACE_NODE_FIELD(for_stmt->init)
+        REPLACE_NODE_FIELD(for_stmt->cond)
+        REPLACE_NODE_FIELD(for_stmt->step)
+        REPLACE_NODE_FIELD(for_stmt->body)
+        break;
+    case AST_STMT_FORDECL:
+        ast_stmt_fordecl_t *fordecl_stmt = (ast_stmt_fordecl_t*) node;
+        REPLACE_NODE_FIELD(fordecl_stmt->init)
+        REPLACE_NODE_FIELD(fordecl_stmt->cond)
+        REPLACE_NODE_FIELD(fordecl_stmt->step)
+        REPLACE_NODE_FIELD(fordecl_stmt->body)
+        break;
+    case AST_STMT_WHILE:
+        ast_stmt_while_t *while_stmt = (ast_stmt_while_t*) node;
+        REPLACE_NODE_FIELD(while_stmt->cond)
+        REPLACE_NODE_FIELD(while_stmt->body)
+        break;
+    case AST_STMT_DO:
+        ast_stmt_do_t *do_stmt = (ast_stmt_do_t*) node;
+        REPLACE_NODE_FIELD(do_stmt->cond)
+        REPLACE_NODE_FIELD(do_stmt->body)
+        break;
+    case AST_STMT_SWITCH:
+        ast_stmt_switch_t *switch_stmt = (ast_stmt_switch_t*) node;
+        REPLACE_NODE_FIELD(switch_stmt->switch_on)
+        REPLACE_NODE_FIELD(switch_stmt->body)
+        break;
+    case AST_STMT_GOTO:
+        ast_stmt_goto_t *goto_stmt = (ast_stmt_goto_t*) node;
+        REPLACE_NODE_FIELD(goto_stmt->target)
+        break;
+    case AST_STMT_BREAK:
+        break;
+    case AST_STMT_CONTINUE:
+        break;
+    case AST_STMT_RETURN:
+        ast_stmt_return_t* ret_stmt = (ast_stmt_return_t*) node;
+        REPLACE_NODE_FIELD(ret_stmt->ret_value)
+        break;
+    case AST_STMT_COMPOUND:
+        ast_stmt_compound_t *comp_stmt = (ast_stmt_compound_t*) node;
+        ARRAY_LIST_TRAVERSE(comp_stmt->statements, ast_stmt_t*, stmt, stmt_idx, {
+            REPLACE_NODE_FIELD_IN_LIST(comp_stmt->statements, stmt, stmt_idx)
+        })
+        break;
+    case AST_STMT_CASE:
+        ast_stmt_case_t *case_stmt = (ast_stmt_case_t*) node;
+        REPLACE_NODE_FIELD(case_stmt->switch_on)
+        break;
+    case AST_STMT_DEFAULT:
+        break;
+    case AST_STMT_LABELED:
+        ast_stmt_labeled_t *lbld_stmt = (ast_stmt_labeled_t*) node;
+        REPLACE_NODE_FIELD(lbld_stmt->underlying)
+        break;
+    case AST_DECL:
+        break;
+    case AST_DECL_DRCT_FN:
+        ast_decl_direct_function_t *fn_decl_node = (ast_decl_direct_function_t*) node;
+        REPLACE_NODE_FIELD(fn_decl_node->decl_type)
+        REPLACE_NODE_FIELD(fn_decl_node->initializer)
+        break;
+    case AST_DECL_DRCT_VAR:
+        ast_decl_direct_variable_t *var_decl_node = (ast_decl_direct_variable_t*) node;
+        REPLACE_NODE_FIELD(var_decl_node->decl_type)
+        REPLACE_NODE_FIELD(var_decl_node->initializer)
+        break;
+    case AST_EXPR:
+        break;
+    case AST_EXPR_CALL:
+        ast_expr_call_t *call_node = (ast_expr_call_t*) node;
+        REPLACE_NODE_FIELD(call_node->function_addr)
+        ARRAY_LIST_TRAVERSE(call_node->arguments, ast_expr_t*, arg, arg_idx, {
+            REPLACE_NODE_FIELD_IN_LIST(call_node->arguments, arg, arg_idx)
+        })
+        break;
+    case AST_EXPR_SYMBOL:
+        break;
+    case AST_EXPR_CONST:
+        break;
+    case AST_EXPR_UNARY:
+        ast_expr_unary_t *unary_node = (ast_expr_unary_t*) node;
+        for_each_node((ast_node_t*)unary_node->opnd, before_children, after_children);
+        break;
+    case AST_EXPR_CAST:
+        ast_expr_cast_t *cast_node = (ast_expr_cast_t*) node;
+        REPLACE_NODE_FIELD(cast_node->cast_to)
+        REPLACE_NODE_FIELD(cast_node->opnd)
+        break;
+    case AST_EXPR_BINARY:
+        ast_expr_binary_t *binop_node = (ast_expr_binary_t*) node;
+        REPLACE_NODE_FIELD(binop_node->left_opnd)
+        REPLACE_NODE_FIELD(binop_node->right_opnd)
+        break;
+    case AST_EXPR_COND:
+        ast_expr_cond_t *cond_expr = (ast_expr_cond_t*) node;
+        REPLACE_NODE_FIELD(cond_expr->cond)
+        REPLACE_NODE_FIELD(cond_expr->if_true)
+        REPLACE_NODE_FIELD(cond_expr->if_false)
+        break;
+    case AST_EXPR_ASSIGN:
+        ast_expr_assign_t *assign_node = (ast_expr_assign_t*) node;
+        REPLACE_NODE_FIELD(assign_node->dest)
+        REPLACE_NODE_FIELD(assign_node->src)
+        break;
+    case AST_EXPR_TYPESZ:
+        ast_expr_sizeof_expr_t* exprsz_expr = (ast_expr_sizeof_expr_t*) node;
+        REPLACE_NODE_FIELD(exprsz_expr->sizeof_expr)
+        break;
+    case AST_EXPR_EXPRSZ:
+        ast_expr_sizeof_type_t* typesz_expr = (ast_expr_sizeof_type_t*) node;
+        REPLACE_NODE_FIELD(typesz_expr->sizeof_type)
+        break;
+    case AST_FUNC_IMPL:
+        ast_function_impl_t *fn_impl = (ast_function_impl_t*) node;
+        REPLACE_NODE_FIELD(fn_impl->decl)
+        REPLACE_NODE_FIELD(fn_impl->body)
+        break;
+    default:
+        error("Unrecognized node type: %d\n", node->node_type);
+        break;
+    }
+
+    if (after_children != NULL) {
+        ast_node_t *new_node = after_children(node);
+        if (new_node != NULL) {
+            node = new_node;
+        }
+    }
+
+    return node;
+}

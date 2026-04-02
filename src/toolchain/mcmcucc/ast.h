@@ -396,4 +396,8 @@ typedef struct {
 
 void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field);
 
+typedef ast_node_t * (*node_visitor)(ast_node_t * node);
+
+ast_node_t *for_each_node(ast_node_t *root, node_visitor before_children, node_visitor after_children);
+
 #endif // AST_H_INCLUDED

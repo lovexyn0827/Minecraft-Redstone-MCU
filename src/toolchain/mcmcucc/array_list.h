@@ -48,7 +48,15 @@
     if (_I < 0 || _I >= (L).size) {\
         fatal("Out of bound!");\
     }\
-    E = (L).base[_I];\
+    E = (typeof(E)) (L).base[_I];\
+}
+
+#define ARRAY_LIST_SET(L, E, I) {\
+    uint _I = I;\
+    if (_I < 0 || _I >= (L).size) {\
+        fatal("Out of bound!");\
+    }\
+    (L).base[_I] = (typeof((L).base[_I])) (E);\
 }
 
 #define ARRAY_LIST_TRAVERSE(L, T, V, I, OP) {\
