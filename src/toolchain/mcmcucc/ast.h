@@ -101,7 +101,7 @@ typedef struct obj_addr obj_addr_t;
     bool constant;\
     bool lvalue;\
     const ast_typename_t *type;\
-    const obj_addr_t *addr;
+    obj_addr_t *address;
 
 typedef struct ast_expr {
     AST_EXPR_NODE_SHARED_FIELDS

@@ -9,6 +9,9 @@ ast_node_t *new_const_node(ast_expr_t *original, uint_t val) {
     const_node->parent = original->parent;
     const_node->constant = true;
     const_node->value = val & 0xFF;
+    const_node->address = (obj_addr_t*) malloc(sizeof(obj_addr_t));
+    const_node->address->type = OBJ_ADDR_IMM;
+    const_node->address->addr = val;
     return (ast_node_t*) const_node;
 }
 

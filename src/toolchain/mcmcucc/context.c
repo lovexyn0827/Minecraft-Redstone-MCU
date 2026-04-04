@@ -63,11 +63,17 @@ symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *d
         const ast_decl_direct_variable_t *var_decl = (const ast_decl_direct_variable_t*) decl;
         symb->immutable = var_decl->decl_type->immutable;
         symb->type = SYM_VARIABLE;
+        symb->address = (obj_addr_t*) malloc(sizeof(obj_addr_t));
+        symb->address->type = OBJ_ADDR_IM;
+        symb->address->addr = NIL_OBJ_ADDR; // TODO Linkage
         break;
     case AST_DECL_DRCT_FN:
         const ast_decl_direct_function_t *fn_decl = (const ast_decl_direct_function_t*) decl;
         symb->immutable = fn_decl->decl_type->immutable;
         symb->type = SYM_FUNCTION;
+        symb->address = (obj_addr_t*) malloc(sizeof(obj_addr_t));
+        symb->address->type = OBJ_ADDR_IM;
+        symb->address->addr = NIL_OBJ_ADDR; // TODO Linkage
         break;
     default:
         fatal("No way! It should never happen!\n");
@@ -87,12 +93,15 @@ symbol_t *register_label(context_t *ctx, str name) {
     symb->name = name;
     symb->immutable = true;
     symb->type = SYM_LABEL;
+    symb->address = (obj_addr_t*) malloc(sizeof(obj_addr_t));
+    symb->address->type = OBJ_ADDR_IM;
+    symb->address->addr = NIL_OBJ_ADDR; // TODO Linkage
     HASH_MAP_PUT(ctx->cur_func->symbol_tbl, name, symb, str, symbol_t*, str_equal)
     return symb;
 }
 
-symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Null]", .address = 0 };
-symbol_t UNSPECIFIED_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Unspecified]", .address = 0 };
+symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Null]", .address = NULL };
+symbol_t UNSPECIFIED_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Unspecified]", .address = NULL };
 
 void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
     ctx->ast.root.node_type = AST_ROOT;

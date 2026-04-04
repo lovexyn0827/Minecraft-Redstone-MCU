@@ -22,13 +22,25 @@ typedef enum {
 } symbol_type_t;
 
 typedef enum obj_addr_space {
+    OBJ_ADDR_IMM,
     OBJ_ADDR_REG,
     OBJ_ADDR_SRAM,
     OBJ_ADDR_IM,
     OBJ_ADDR_CSTACK,
     OBJ_ADDR_OSTACK,
-    OBJ_ADDR_CSR
+    OBJ_ADDR_CSR,
+    OBJ_ADDR_NIL
 } obj_addr_space_t;
+
+#define NIL_OBJ_ADDR (0xFFFFFFFF)
+
+// Notes on semantics of the addr field
+//  - For REG, denotes the index of a GPR.
+//  - For SRAM & IM, denotes the address of a word in corresponding memory, or a unique label if addr[16] = 1.
+//  - For CSR, denotes the address of a CSR.
+//  - For IMM, denotes the unsigned value of a immediate.
+//  - For CSTACK and OSTACK, the value of addr is silently ignored.
+//  - If NIL_OBJ_ADDR were specified, the value of addr is considered invalid and needs further assignment(s).
 
 typedef struct obj_addr {
     obj_addr_space_t type;
@@ -40,7 +52,7 @@ typedef struct symbol_t {
     str name;
     const ast_decl_t *decl;
     bool immutable;
-    const obj_addr_t *address;
+    obj_addr_t *address;
 } symbol_t;
 
 typedef struct context {

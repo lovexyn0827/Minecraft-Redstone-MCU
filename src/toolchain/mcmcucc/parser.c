@@ -211,6 +211,9 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         const_node->constant = true;
         const_node->lvalue = false;
         const_node->value = parse_constant_value(first_token);
+        const_node->address = (obj_addr_t*) malloc(sizeof(obj_addr_t));
+        const_node->address->type = OBJ_ADDR_IMM;
+        const_node->address->addr = const_node->value;
         *dest = (ast_expr_t*) const_node;
         skip_current(ctx->ptr);
         return true;
@@ -220,6 +223,7 @@ bool parse_primary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         sym_node->parent = parent;
         symbol_t *symb = get_symbol(ctx, first_token->token);
         sym_node->symbol = symb;
+        sym_node->address = symb->address;
         skip_current(ctx->ptr);
         switch (symb->type) {
         case SYM_FUNCTION:
@@ -288,6 +292,7 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         parse_expr(ctx, (ast_node_t*) array_subscr_node, (ast_expr_t**) &(array_subscr_node->right_opnd));
         array_subscr_node->constant = left_hand->constant && array_subscr_node->right_opnd->constant;
         left_hand->parent = (ast_node_t*) array_subscr_node;
+        array_subscr_node->address = NULL;
         *dest = (ast_expr_t*) array_subscr_node;
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_SP); // Skip ']'
         return true;
@@ -313,6 +318,7 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
 
         left_hand->parent = (ast_node_t*) func_call_node;
         verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P); // Skip ')'
+        func_call_node->address = NULL;
         *dest = (ast_expr_t*) func_call_node;
         return true;
     case TOKEN_PUNCT_INC:
@@ -328,6 +334,7 @@ bool parse_postfix_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         getinc_node->lvalue = false;
         getinc_node->opnd = left_hand;
         left_hand->parent = (ast_node_t*) getinc_node;
+        getinc_node->address = NULL;
         *dest = (ast_expr_t*) getinc_node;
         if (!left_hand->lvalue) {
             error_on_token(postfix_start, "Operand of ++ or -- must be lvalue!");
@@ -418,6 +425,7 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         }
 
         unary_node->constant = unary_node->opnd->constant;
+        unary_node->address = NULL;
         *dest = (ast_expr_t*) unary_node;
         return true;
         // Unary ops
@@ -431,6 +439,7 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
             sizeof_node->constant = true;
             sizeof_node->lvalue = false;
             sizeof_expr->parent = (ast_node_t*) sizeof_node;
+            sizeof_node->address = NULL;
             *dest = (ast_expr_t*) sizeof_node;
             return true;
         } else {
@@ -442,6 +451,7 @@ bool parse_unary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
             verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_L_P); // Skip '('
             parse_typename(ctx, (ast_node_t*) sizeof_node, (ast_typename_t**) &(sizeof_node->sizeof_type));
             verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_R_P); // Skip ')'
+            sizeof_node->address = NULL;
             *dest = (ast_expr_t*) sizeof_node;
             return true;
         }
@@ -515,6 +525,7 @@ bool parse_binary_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest,
         new_node->lvalue = false;
         opnd_parser(ctx, (ast_node_t*) new_node, (ast_expr_t**) &(new_node->right_opnd));
         new_node->constant = new_node->left_opnd->constant && new_node->right_opnd->constant;
+        new_node->address = NULL;
         left_opnd = (ast_expr_t*) new_node;
     }
 }
@@ -729,6 +740,7 @@ bool parse_cond_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     cond_node->constant = cond_node->cond->constant && cond_node->if_false->constant && cond_node->if_true->constant;
     cond_node->likely_true = likely_true;
     cond_node->parent = parent;
+    cond_node->address = NULL;
     *dest = (ast_expr_t*) cond_node;
     return true;
 }
@@ -809,6 +821,7 @@ bool parse_assign_expr(context_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
         error_on_token(assign_op_token, "Destnation must be lvalue!\n");
     }
 
+    assign_node->address = NULL;
     *dest = (ast_expr_t*) assign_node;
     return true;
 }
