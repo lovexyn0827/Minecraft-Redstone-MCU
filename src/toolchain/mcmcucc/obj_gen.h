@@ -5,6 +5,8 @@
 
 #include <stdio.h>
 
+// We're not generating binaries directly thus we don't have to include binary opcode here.
+
 typedef enum insn_name {
     I_ADD,
     I_SUB,
@@ -42,6 +44,15 @@ typedef enum insn_name {
     I_LJMP,
     I_INVOKE
 } insn_name_t;
+
+typedef uint_t reg_no_t;
+
+typedef enum cmp_mode {
+    CMP_EQ,
+    CMP_NE,
+    CMP_GT,
+    CMP_LT
+} cmp_mode_t;
 
 void generate_asm(context_t *ctx, FILE *dest);
 
