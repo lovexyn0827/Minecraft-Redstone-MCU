@@ -54,6 +54,6 @@ typedef enum cmp_mode {
     CMP_LT
 } cmp_mode_t;
 
-void generate_asm(context_t *ctx, FILE *dest);
+void generate_asm(parse_ctx_t *ctx, FILE *dest);
 
 #endif // OBJ_GEN_H_INCLUDED

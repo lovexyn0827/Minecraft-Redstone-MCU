@@ -153,14 +153,19 @@ ast_node_t *eval_constexpr(ast_node_t *node) {
     }
 }
 
-void fold_constants(context_t *ctx) {
+void fold_constants(parse_ctx_t *ctx) {
     for_each_node((ast_node_t*) &(ctx->ast.root), NULL, eval_constexpr);
     debug("##### AFTER Constant Folding: \n");
     dump_ast((ast_node_t*) &(ctx->ast.root), NULL, "");
 }
 
+// *********** Definite Conditional Expr Elimation ***********
+
+void elimate_definite_cond_expr(parse_ctx_t *ctx) {
+}
+
 // *********** Main Procedure ***********
 
-void optimize_ast(context_t *ctx) {
+void optimize_ast(parse_ctx_t *ctx) {
     fold_constants(ctx);
 }

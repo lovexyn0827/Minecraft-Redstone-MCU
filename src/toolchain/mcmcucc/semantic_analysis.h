@@ -3,6 +3,6 @@
 
 #include "context.h"
 
-void check_semantics(context_t *ctx);
+void check_semantics(parse_ctx_t *ctx);
 
 #endif // SEMANTIC_ANALYSIS_H_INCLUDED

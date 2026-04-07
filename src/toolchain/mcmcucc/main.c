@@ -50,7 +50,7 @@ int compile(str source, str output) {
         print_error_cnt_and_exit();
     }
 
-    context_t ctx;
+    parse_ctx_t ctx;
     init_compilation_context(&ctx, &token_lst);
     parse(&ctx);
     // ...

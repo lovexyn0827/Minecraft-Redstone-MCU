@@ -3,6 +3,6 @@
 
 #include "context.h"
 
-void optimize_ast(context_t *ctx);
+void optimize_ast(parse_ctx_t *ctx);
 
 #endif // OPT_PASSES_H_INCLUDED

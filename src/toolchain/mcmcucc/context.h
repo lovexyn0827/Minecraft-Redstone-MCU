@@ -60,15 +60,17 @@ typedef struct context {
     ast_node_t *cur_scope;
     ast_function_impl_t *cur_func;
     ast_t ast;
-} context_t;
+} parse_ctx_t;
 
-symbol_t *get_symbol(context_t *ctx, str name);
-symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *decl);
-symbol_t *register_label(context_t *ctx, str name);
-void register_symbol(context_t *ctx, symbol_t *symb);
+
+
+symbol_t *get_symbol(parse_ctx_t *ctx, str name);
+symbol_t *register_declared_symbol(parse_ctx_t *ctx, str name, const ast_decl_t *decl);
+symbol_t *register_label(parse_ctx_t *ctx, str name);
+void register_symbol(parse_ctx_t *ctx, symbol_t *symb);
 
 extern symbol_t NIL_SYMBOL;
 
-void init_compilation_context(context_t *ctx, token_lst_t *tokens);
+void init_compilation_context(parse_ctx_t *ctx, token_lst_t *tokens);
 
 #endif // CONTEXT_H_INCLUDED

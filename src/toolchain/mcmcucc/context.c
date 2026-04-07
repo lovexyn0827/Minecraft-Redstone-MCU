@@ -19,7 +19,7 @@ symbol_tbl_t *get_symbol_table(ast_node_t *scope) {
     }
 }
 
-symbol_t *get_symbol(context_t *ctx, str name) {
+symbol_t *get_symbol(parse_ctx_t *ctx, str name) {
     debug("Finding symbol %s\n", name);
     const ast_node_t *scope = ctx->cur_scope;
     while (scope != NULL) {
@@ -45,7 +45,7 @@ symbol_t *get_symbol(context_t *ctx, str name) {
     return NULL;
 }
 
-void register_symbol(context_t *ctx, symbol_t *symb) {
+void register_symbol(parse_ctx_t *ctx, symbol_t *symb) {
     symbol_tbl_t *symbol_tbl = get_symbol_table(ctx->cur_scope);
     if (symbol_tbl == NULL) {
         fatal("This should never happen as we are ensuring cur_scope to denote a vaild scope node!\n");
@@ -54,7 +54,7 @@ void register_symbol(context_t *ctx, symbol_t *symb) {
     HASH_MAP_PUT(*symbol_tbl, symb->name, symb, str, symbol_t*, str_equal)
 }
 
-symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *decl) {
+symbol_t *register_declared_symbol(parse_ctx_t *ctx, str name, const ast_decl_t *decl) {
     symbol_t *symb = (symbol_t*) malloc(sizeof(symbol_t));
     symb->decl = decl;
     symb->name = name;
@@ -83,7 +83,7 @@ symbol_t *register_declared_symbol(context_t *ctx, str name, const ast_decl_t *d
     return symb;
 }
 
-symbol_t *register_label(context_t *ctx, str name) {
+symbol_t *register_label(parse_ctx_t *ctx, str name) {
     if (ctx->cur_func == NULL) {
         return NULL;
     }
@@ -103,7 +103,7 @@ symbol_t *register_label(context_t *ctx, str name) {
 symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Null]", .address = NULL };
 symbol_t UNSPECIFIED_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Unspecified]", .address = NULL };
 
-void init_compilation_context(context_t *ctx, token_lst_t *tokens) {
+void init_compilation_context(parse_ctx_t *ctx, token_lst_t *tokens) {
     ctx->ast.root.node_type = AST_ROOT;
     ctx->ast.root.parent = NULL;
     ARRAY_LIST_INIT(const ast_node_t*, ctx->ast.root.children)

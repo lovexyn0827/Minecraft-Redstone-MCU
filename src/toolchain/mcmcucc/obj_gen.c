@@ -118,9 +118,10 @@ void build_io_insn(insn_name_t op, reg_no_t reg, uint_t io_port, FILE *asm_dest)
 
 // *********** Expression Builder ***********
 
-void build_unary_expr_evaluator(context_t *ctx, const ast_expr_unary_t *expr,
+void build_unary_expr_evaluator(parse_ctx_t *ctx, const ast_expr_unary_t *expr,
                                 const obj_addr_t *val_dest, FILE *asm_dest) {
     // ++   --  &   *   +   -   ~   !
+    const ast_expr_t *opnd = expr->opnd;
     switch (expr->op) {
     case UOP_INCGET:
         break;
@@ -141,33 +142,33 @@ void build_unary_expr_evaluator(context_t *ctx, const ast_expr_unary_t *expr,
     case UOP_BITWISE_NOT:
         break;
     case UOP_LOGICAL_NOT:
-    break;
+        break;
     default:
         fatal("No way! Unexpected op!");
     }
 }
 
-void build_binary_expr_evaluator(context_t *ctx, const ast_expr_binary_t *expr,
+void build_binary_expr_evaluator(parse_ctx_t *ctx, const ast_expr_binary_t *expr,
                                  const obj_addr_t *val_dest, FILE *asm_dest) {
 }
 
-void build_cond_expr_evaluator(context_t *ctx, const ast_expr_cond_t *expr,
+void build_cond_expr_evaluator(parse_ctx_t *ctx, const ast_expr_cond_t *expr,
                                const obj_addr_t *val_dest, FILE *asm_dest) {
 }
 
-void build_assign_expr_evaluator(context_t *ctx, const ast_expr_assign_t *expr,
+void build_assign_expr_evaluator(parse_ctx_t *ctx, const ast_expr_assign_t *expr,
                                  const obj_addr_t *val_dest, FILE *asm_dest) {
 }
 
-void build_call_expr_evaluator(context_t *ctx, const ast_expr_call_t *expr,
+void build_call_expr_evaluator(parse_ctx_t *ctx, const ast_expr_call_t *expr,
                                const obj_addr_t *val_dest, FILE *asm_dest) {
 }
 
-void build_symbol_expr_evaluator(context_t *ctx, const ast_expr_symbol_t *expr,
+void build_symbol_expr_evaluator(parse_ctx_t *ctx, const ast_expr_symbol_t *expr,
                                  const obj_addr_t *val_dest, FILE *asm_dest) {
 }
 
-void build_expr_evaluator(context_t *ctx, const ast_expr_t *expr, const obj_addr_t *val_dest, FILE *asm_dest) {
+void build_expr_evaluator(parse_ctx_t *ctx, const ast_expr_t *expr, const obj_addr_t *val_dest, FILE *asm_dest) {
     switch (expr->node_type) {
     case AST_EXPR_UNARY:
         build_unary_expr_evaluator(ctx, (const ast_expr_unary_t*) expr, val_dest, asm_dest);
@@ -204,5 +205,5 @@ void build_expr_evaluator(context_t *ctx, const ast_expr_t *expr, const obj_addr
     }
 }
 
-void generate_asm(context_t *ctx, FILE *asm_dest) {
+void generate_asm(parse_ctx_t *ctx, FILE *asm_dest) {
 }
