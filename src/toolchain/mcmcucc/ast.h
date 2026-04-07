@@ -406,4 +406,6 @@ typedef ast_node_t * (*node_visitor)(ast_node_t * node);
 
 ast_node_t *for_each_node(ast_node_t *root, node_visitor before_children, node_visitor after_children);
 
+bool is_ancestor(const ast_node_t *ancestor, const ast_node_t *child);
+
 #endif // AST_H_INCLUDED

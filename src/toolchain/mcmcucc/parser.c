@@ -343,7 +343,8 @@ bool parse_postfix_expr(parse_ctx_t *ctx, ast_node_t *parent, ast_expr_t **dest)
 
         return true;
     default:
-        // Unexpected
+        // Unexpected, parent left NULL
+        left_hand->parent = parent;
         *dest = left_hand;
         return true;
     }
@@ -732,6 +733,7 @@ bool parse_cond_expr(parse_ctx_t *ctx, ast_node_t *parent, ast_expr_t **dest) {
     ast_expr_cond_t *cond_node = (ast_expr_cond_t*) malloc(sizeof(ast_expr_cond_t));
     cond_node->node_type = AST_EXPR_COND;
     cond_node->cond = left_opnd;
+    left_opnd->parent = (ast_node_t*) cond_node;
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_QUESTION);   // Skip '?'
     parse_expr(ctx, (ast_node_t*) cond_node, (ast_expr_t**) &(cond_node->if_true));
     verify_and_skip_current(ctx->ptr, TOKEN_PUNCT_COLON);   // Skip ':'
@@ -815,6 +817,7 @@ bool parse_assign_expr(parse_ctx_t *ctx, ast_node_t *parent, ast_expr_t **dest) 
     assign_node->constant = false;
     assign_node->op = assign_op;
     assign_node->dest = assign_dest;
+    assign_dest->parent = (ast_node_t*) assign_node;
     parse_assign_expr(ctx, (ast_node_t*) assign_node, (ast_expr_t**) &(assign_node->src));
     assign_node->lvalue = assign_node->src->lvalue;    // XXX
     if (!assign_dest->lvalue) {
@@ -1043,6 +1046,9 @@ ast_typename_t *derive_type(parse_ctx_t *ctx, type_derivation_stack_t *derivatio
             fn_node->return_type = type_in;
             fn_node->immutable = false;
             memcpy(&(fn_node->param_type), &(fn_derv->params), sizeof(param_list_t));
+            ARRAY_LIST_TRAVERSE(fn_node->param_type, ast_decl_direct_variable_t*, param, param_i, {
+                param->parent = (ast_node_t*) fn_node;
+            })
             type_in = (ast_typename_t*) fn_node;
             break;
         case DERIVATION_POINTER:
@@ -1106,7 +1112,7 @@ bool parse_param_decl(parse_ctx_t *ctx, ast_decl_direct_variable_t **dest) {
     uint_t decl_spec = 0;
     ast_decl_direct_variable_t *param_decl = (ast_decl_direct_variable_t*) malloc(sizeof(ast_decl_direct_variable_t));
     param_decl->node_type = AST_DECL_DRCT_VAR;
-    param_decl->parent = NULL;
+    param_decl->parent = NULL;  // Leaving it NULL for further completion
     param_decl->initializer = NULL;
     param_decl->register_var = true;
     mark_current(ctx->ptr);
@@ -1256,7 +1262,7 @@ bool parse_declarator(parse_ctx_t *ctx, ast_node_t *parent, ast_typename_t *type
     }
 
     ast_decl_t *decl_node;
-    ast_typename_t *decl_type = derive_type(ctx, &derivations, type_in, parent);
+    ast_typename_t *decl_type = derive_type(ctx, &derivations, type_in, NULL);
     switch (decl_type->node_type) {
     case AST_TYPE_PRIM:
     case AST_TYPE_PTR:
@@ -1264,6 +1270,7 @@ bool parse_declarator(parse_ctx_t *ctx, ast_node_t *parent, ast_typename_t *type
         var_decl->decl_type = decl_type;
         var_decl->node_type = AST_DECL_DRCT_VAR;
         var_decl->parent = parent;
+        decl_type->parent = (ast_node_t*) var_decl;
         if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_ASSIGN) {
             skip_current(ctx->ptr);
             parse_assign_expr(ctx, (ast_node_t*) var_decl, (ast_expr_t**) &(var_decl->initializer));
@@ -1279,6 +1286,7 @@ bool parse_declarator(parse_ctx_t *ctx, ast_node_t *parent, ast_typename_t *type
         ast_decl_direct_function_t *fn_decl = (ast_decl_direct_function_t*) malloc(sizeof(ast_decl_direct_function_t));
         fn_decl->node_type = AST_DECL_DRCT_FN;
         fn_decl->parent = parent;
+        decl_type->parent = (ast_node_t*) fn_decl;
         if (peek_current(ctx->ptr)->type == TOKEN_PUNCT_ASSIGN) {
             skip_current(ctx->ptr);
             parse_assign_expr(ctx, (ast_node_t*) fn_decl, (ast_expr_t**) &(fn_decl->initializer));
@@ -1306,7 +1314,6 @@ bool parse_declarator(parse_ctx_t *ctx, ast_node_t *parent, ast_typename_t *type
     }
 
     register_declared_symbol(ctx, ident_token->token, decl_node);
-    type_in->parent = parent;
     *dest = decl_node;
     return true;
 }
@@ -1507,8 +1514,8 @@ bool parse_for_stmt(parse_ctx_t *ctx, ast_node_t *parent, bool likely, ast_stmt_
     mark_current(ctx->ptr);
     if (parse_decl_stmt(ctx, NULL, &decl)) {
         pop_mark(ctx->ptr);
-        decl->parent = parent;
         ast_stmt_fordecl_t *for_stmt = (ast_stmt_fordecl_t*) malloc(sizeof(ast_stmt_fordecl_t));
+        decl->parent = (ast_node_t*) for_stmt;
         for_stmt->node_type = AST_STMT_FORDECL;
         for_stmt->likely_true = likely;
         for_stmt->parent = parent;

@@ -6,7 +6,11 @@
 #include <stdio.h>
 
 void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
-    debug("%08x --> %08x: %s\n", parent, node, field);
+    debug("%08x --> %08x: %s\n", node->parent, node, field);
+    if (node->parent != parent) {
+        warn("Parent dismatch!\n");
+    }
+
     switch (node->node_type) {
     case AST_ROOT:
         debug("%08x: ROOT_%08x\n", node, node);
@@ -219,17 +223,17 @@ void dump_ast(const ast_node_t *node, const ast_node_t *parent, str field) {
         break;
     case AST_EXPR_TYPESZ:
         const ast_expr_sizeof_expr_t* exprsz_expr = (const ast_expr_sizeof_expr_t*) node;
-        debug("%08d: SIZEOF_%08d\n");
+        debug("%08x: SIZEOF_%08x\n", node, node);
         dump_ast((const ast_node_t*) exprsz_expr->sizeof_expr, node, "Of");
         break;
     case AST_EXPR_EXPRSZ:
         const ast_expr_sizeof_type_t* typesz_expr = (const ast_expr_sizeof_type_t*) node;
-        debug("%08d: SIZEOF_%08d\n");
+        debug("%08x: SIZEOF_%08x\n", node, node);
         dump_ast((const ast_node_t*) typesz_expr->sizeof_type, node, "Of");
         break;
     case AST_FUNC_IMPL:
         const ast_function_impl_t *fn_impl = (const ast_function_impl_t*) node;
-        debug("%08x: EXPR_SYMBOL_%08x_%s\n", node, node, fn_impl->decl->decl_name->name);
+        debug("%08x: FN_IMPL_%08x_%s\n", node, node, fn_impl->decl->decl_name->name);
         dump_ast((const ast_node_t*) fn_impl->decl, node, "Decl");
         dump_ast((const ast_node_t*) fn_impl->body, node, "Body");
         break;
@@ -440,4 +444,16 @@ ast_node_t *for_each_node(ast_node_t *node, node_visitor before_children, node_v
     }
 
     return node;
+}
+
+bool is_ancestor(const ast_node_t *ancestor, const ast_node_t *child) {
+    while (child != NULL) {
+        if (child == ancestor) {
+            return true;
+        } else {
+            child = child->parent;
+        }
+    }
+
+    return false;
 }
