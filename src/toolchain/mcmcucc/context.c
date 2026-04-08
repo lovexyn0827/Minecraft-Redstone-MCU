@@ -103,7 +103,7 @@ symbol_t *register_label(parse_ctx_t *ctx, str name) {
 symbol_t NIL_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Null]", .address = NULL };
 symbol_t UNSPECIFIED_SYMBOL = { .type = SYM_NOTEXIST, .name = "[Unspecified]", .address = NULL };
 
-void init_compilation_context(parse_ctx_t *ctx, token_lst_t *tokens) {
+void init_parse_context(parse_ctx_t *ctx, token_lst_t *tokens) {
     ctx->ast.root.node_type = AST_ROOT;
     ctx->ast.root.parent = NULL;
     ARRAY_LIST_INIT(const ast_node_t*, ctx->ast.root.children)
@@ -115,4 +115,22 @@ void init_compilation_context(parse_ctx_t *ctx, token_lst_t *tokens) {
     ARRAY_LIST_SIZE(*tokens, ctx->ptr->end_pos);
     ctx->cur_scope = (ast_node_t*) &(ctx->ast.root);
     ctx->cur_func = NULL;
+}
+
+void init_build_ctx(build_ctx_t *ctx, ast_t *ast) {
+    memcpy(&(ctx->ast), ast, sizeof(ast_t));
+    for (uint_t i = 0; i < REG_CNT; i++) {
+        ctx->reg_allocation[i].reg_no = i;
+        ctx->reg_allocation[i].rent_span = NULL;
+    }
+}
+
+uint_t allocate_reg(build_ctx_t *ctx) {
+    for (uint_t i = 0; i < REG_CNT; i++) {
+        if (!is_ancestor(ctx->reg_allocation[i].rent_span, ctx->cur_scope)) {
+            return i;
+        }
+    }
+
+    return REG_ALLOC_FAIL;
 }

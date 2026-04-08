@@ -55,14 +55,12 @@ typedef struct symbol_t {
     obj_addr_t *address;
 } symbol_t;
 
-typedef struct context {
+typedef struct parse_ctx {
     read_head_t *ptr;
     ast_node_t *cur_scope;
     ast_function_impl_t *cur_func;
     ast_t ast;
 } parse_ctx_t;
-
-
 
 symbol_t *get_symbol(parse_ctx_t *ctx, str name);
 symbol_t *register_declared_symbol(parse_ctx_t *ctx, str name, const ast_decl_t *decl);
@@ -71,6 +69,25 @@ void register_symbol(parse_ctx_t *ctx, symbol_t *symb);
 
 extern symbol_t NIL_SYMBOL;
 
-void init_compilation_context(parse_ctx_t *ctx, token_lst_t *tokens);
+void init_parse_context(parse_ctx_t *ctx, token_lst_t *tokens);
+
+typedef struct reg_status {
+    uint_t reg_no;
+    const ast_node_t *rent_span;
+} reg_status_t;
+
+#define REG_CNT (16)
+
+typedef struct build_ctx {
+    ast_t ast;
+    ast_node_t *cur_scope;
+    reg_status_t reg_allocation[REG_CNT];
+} build_ctx_t;
+
+void init_build_ctx(build_ctx_t *ctx, ast_t *ast);
+
+#define REG_ALLOC_FAIL (0xFF)
+
+uint_t allocate_reg(build_ctx_t *ctx);
 
 #endif // CONTEXT_H_INCLUDED

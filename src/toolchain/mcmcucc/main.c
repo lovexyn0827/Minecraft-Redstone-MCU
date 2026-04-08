@@ -50,24 +50,26 @@ int compile(str source, str output) {
         print_error_cnt_and_exit();
     }
 
-    parse_ctx_t ctx;
-    init_compilation_context(&ctx, &token_lst);
-    parse(&ctx);
+    parse_ctx_t parse_ctx;
+    init_parse_context(&parse_ctx, &token_lst);
+    parse(&parse_ctx);
     // ...
     if (error_cnt > 0) {
         print_error_cnt_and_exit();
     }
 
-    check_semantics(&ctx);
+    check_semantics(&parse_ctx);
     if (error_cnt > 0) {
         print_error_cnt_and_exit();
     }
 
-    optimize_ast(&ctx);
+    optimize_ast(&parse_ctx);
     if (error_cnt > 0) {
         print_error_cnt_and_exit();
     }
 
+    build_ctx_t build_ctx;
+    init_build_ctx(&build_ctx, &(parse_ctx.ast));
     print_error_cnt_and_exit();
     return 0;
 }
