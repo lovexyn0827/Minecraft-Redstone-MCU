@@ -159,10 +159,13 @@ void fold_constants(parse_ctx_t *ctx) {
     dump_ast((ast_node_t*) &(ctx->ast.root), NULL, "");
 }
 
-// *********** Definite Conditional Expr Elimation ***********
+// *********** Definite Conditional Expr Elimination ***********
 
 void elimate_definite_cond_expr(parse_ctx_t *ctx) {
 }
+
+// *********** Address Of Operator Elimination ***********
+// *********** No-op operator elimation ***********
 
 // *********** Main Procedure ***********
 
