@@ -80,7 +80,7 @@ typedef struct reg_status {
 
 typedef struct build_ctx {
     ast_t ast;
-    ast_node_t *cur_scope;
+    const ast_node_t *cur_scope;
     reg_status_t reg_allocation[REG_CNT];
 } build_ctx_t;
 

@@ -7,6 +7,7 @@
 #include "parser.h"
 #include "semantic_analysis.h"
 #include "opt_passes.h"
+#include "obj_gen.h"
 
 uint_t error_cnt;
 uint_t warning_cnt;
@@ -70,6 +71,7 @@ int compile(str source, str output) {
 
     build_ctx_t build_ctx;
     init_build_ctx(&build_ctx, &(parse_ctx.ast));
+    generate_asm(&build_ctx, stdout);
     print_error_cnt_and_exit();
     return 0;
 }

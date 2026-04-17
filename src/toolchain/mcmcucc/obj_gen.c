@@ -116,36 +116,91 @@ void build_io_insn(insn_name_t op, reg_no_t reg, uint_t io_port, FILE *asm_dest)
     fprintf(asm_dest, "\t%8sr%d\t%#03x\n", get_insn_name(op), reg, io_port);
 }
 
+// *********** Date Transfer ***********
+
+void alloc_in_gpr(build_ctx_t *ctx, const obj_addr_t *from, const obj_addr_t **tmpreg) {
+    // TODO
+    *tmpreg = from;
+}
+
+void alloc_out_gpr(build_ctx_t *ctx, const obj_addr_t **tmpreg, const obj_addr_t *to) {
+    // TODO
+    *tmpreg = to;
+}
+
+void load_to_tmpreg(build_ctx_t *ctx, const obj_addr_t *from, const obj_addr_t *tmpreg, FILE *asm_dest) {
+    // TODO
+}
+
+void unload_from_tmpreg(build_ctx_t *ctx, const obj_addr_t *tmpreg, const obj_addr_t *to, FILE *asm_dest) {
+    // TODO
+}
+
 // *********** Expression Builder ***********
 
 void build_unary_expr_evaluator(build_ctx_t *ctx, const ast_expr_unary_t *expr,
                                 const obj_addr_t *val_dest, FILE *asm_dest) {
     // ++   --  &   *   +   -   ~   !
     //const ast_expr_t *opnd = expr->opnd;
+    // No constant nodes are expected since they should have been folded into pure constant nodes.
+    const ast_node_t *prev_scope = ctx->cur_scope;
+    ctx->cur_scope = (ast_node_t*) expr;
+    const obj_addr_t *rs_addr, *rd_addr;
+    alloc_in_gpr(ctx, expr->address, &rs_addr);
+    alloc_out_gpr(ctx, &rd_addr, val_dest);
+    load_to_tmpreg(ctx, expr->address, rs_addr, asm_dest);
+    bool unloaded_ahead = false;
     switch (expr->op) {
     case UOP_INCGET:
+        build_immalu_insn(I_ADDI, rd_addr->addr, rd_addr->addr, 0x01, asm_dest);
         break;
     case UOP_GETINC:
+        unloaded_ahead = true;
+        unload_from_tmpreg(ctx, rd_addr, val_dest, asm_dest);
+        build_immalu_insn(I_ADDI, rd_addr->addr, rd_addr->addr, 0x01, asm_dest);
         break;
     case UOP_DECGET:
+        build_immalu_insn(I_ADDI, rd_addr->addr, rd_addr->addr, 0xFF, asm_dest);
         break;
     case UOP_GETDEC:
+        unload_from_tmpreg(ctx, rd_addr, val_dest, asm_dest);
+        unloaded_ahead = true;
+        build_immalu_insn(I_ADDI, rd_addr->addr, rd_addr->addr, 0xFF, asm_dest);
         break;
     case UOP_ADDRESSOF:
+        // Optimization passes should have handled it
         break;
     case UOP_DEREFERENCE:
+        // Read from memory or generate a lvalue for assignment?
+        // Therefore, we should have masked out lvalue flags for non-lvalues (i.e. anything except assign destinations)
+        if (!expr->lvalue) {
+            build_memory_insn(I_ILOAD, rs_addr->addr, rd_addr->addr, 0x00, asm_dest);
+        } else {
+            // NO-OP
+        }
+
         break;
     case UOP_POSITIVE:
+        // NO_OP, and such nodes should have been swept off in optimization.
+        fatal("It should have been swept off in optimization!");
         break;
     case UOP_NEGATIVATE:
+        // We have no cleverer option
+        build_immalu_insn(I_XORI, rs_addr->addr, rd_addr->addr, 0xFF, asm_dest);
+        build_immalu_insn(I_ADDI, rd_addr->addr, rd_addr->addr, 0x01, asm_dest);
         break;
     case UOP_BITWISE_NOT:
+        build_immalu_insn(I_XORI, rs_addr->addr, rd_addr->addr, 0xFF, asm_dest);
         break;
     case UOP_LOGICAL_NOT:
+        build_cmpi_insn(I_CMPIU, rs_addr->addr, rd_addr->addr, 0x00, CMP_EQ, asm_dest);
         break;
     default:
         fatal("No way! Unexpected op!");
     }
+
+    if (!unloaded_ahead) unload_from_tmpreg(ctx, rd_addr, val_dest, asm_dest);
+    ctx->cur_scope = prev_scope;
 }
 
 void build_binary_expr_evaluator(build_ctx_t *ctx, const ast_expr_binary_t *expr,
