@@ -263,7 +263,7 @@ Constant := Identifier
 Variable := Identifier
 Pointer := Identifier
 
-Insn := ALUInsn | ImmALUInsn | SignedImmALUInsn | MemoryInsn 
+Insn := ALUInsn | ImmALUInsn | MemoryInsn 
 		| StackInsn | JmpInsn | BranchInsn | SimpleInsn | CMPInsn 
 		| CMPIInsn | IOInsn
 ALUInsn := ALUInsnOpcode Reg Reg Reg
